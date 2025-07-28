@@ -736,7 +736,7 @@ class StandardTiming:
 
 
 # Simple test case
-with(open('3840x2160.hex', 'r')) as file:
+with(open('../resources/3840x2160.hex', 'r')) as file:
     expected = file.read()
 
 

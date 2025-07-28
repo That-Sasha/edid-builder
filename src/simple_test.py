@@ -1,6 +1,7 @@
 import itertools
 
 from edid_models import BaseEDID, Header, BasicDisplayParameters, ChromaticityCoordinates, StandardTiming
+from math import floor
 
 
 def simple_test(test_class, expected):
@@ -39,7 +40,6 @@ def simple_test(test_class, expected):
         assert False, error_string
     else:
         print(f'Simple test success!\n{highlight_match}')
-
 
 
 # Simple test case

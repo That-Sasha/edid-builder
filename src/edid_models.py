@@ -2,7 +2,7 @@ import re
 import string
 
 from functools import reduce
-from math import ceil, floor, log
+from math import ceil, log
 from textwrap import wrap
 
 def bytes_to_hex_block(byte_array, width=16):

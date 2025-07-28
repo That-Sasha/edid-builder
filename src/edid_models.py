@@ -2,7 +2,11 @@ import re
 import string
 
 from functools import reduce
+from math import floor
 from textwrap import wrap
+
+LSB8_BITMASK = int('0xFF',0)
+LSB4_BITMASK = int('0x0F',0)
 
 def bytes_to_hex_block(byte_array, width=16):
 
@@ -60,20 +64,36 @@ class EdidProperty:
 
 class ByteBlock:
 
-    def data_at_position(self, value):
+    def data_at_position(self, position):
         # returns the data that contains the specified byte
         properties = [a for a in dir(self) if 'EdidPropertyValue' in str(type(getattr(self, a)))]
 
         for prop in properties:
             byte_range = getattr(self, prop).byte_range
 
-            if value in range(*byte_range):
+            if position in range(*byte_range):
                 prop_value = getattr(self, prop).value
 
-                if 'data_at_position' in dir(prop_value):
-                    prop_value = prop_value.data_at_position(value - byte_range[0])
+                if isinstance(prop_value, list):
+                    if all('data_at_position' in dir(prop) for prop in prop_value):
 
-                return {'name' : prop, 'value' : prop_value, 'range' : byte_range}
+                        block_size = (byte_range[1] - byte_range[0]) / len(prop_value)
+
+                        depth = position - byte_range[0]
+                        block_num = floor(depth / block_size)
+
+                        prop_value = prop_value[block_num].data_at_position(int(depth - block_num * block_size))
+
+                        prop = f'{prop}{block_num}'
+
+
+                elif 'data_at_position' in dir(prop_value):
+                    prop_value = prop_value.data_at_position(int(position - byte_range[0]))
+
+                if not prop_value:
+                    prop_value = 'not found'
+
+                return {'byte' : position, 'name' : prop, 'value' : prop_value, 'range' : byte_range}
 
         return False
 
@@ -92,18 +112,22 @@ class ByteBlock:
         return bytes_to_hex_block(self.as_bytes)
 
 class BaseEDID(ByteBlock):
-    def __init__(self, header, basic_display_parameters, chromaticity_coordinates, standard_timings, established_timing='000000'):
+    def __init__(self, header, basic_display_parameters, chromaticity_coordinates, standard_timings, descriptors, established_timing='000000'):
         if not isinstance(standard_timings, list):
             standard_timings = [standard_timings]
 
         assert all(c in string.hexdigits for c in established_timing), 'Red green lsb must be a 6 digit hexadecimal string'
         assert all(isinstance(timing, StandardTiming) for timing in standard_timings) and 1 <= len(standard_timings) <= 8, 'Standard timings must be a list of at least 1 and at most 8 standard timing objects'
+        assert isinstance(descriptors, list) and len(descriptors) == 4, 'Descriptors must be a list of 4 descriptor objects'
+        assert isinstance(descriptors[0], DetailedTimingDescriptor), 'Descriptor 1 must be a detailed timing descriptor'
 
         self._header = header
         self._basic_display_parameters = basic_display_parameters
         self._chromaticity_coordinates = chromaticity_coordinates
         self._established_timing = established_timing
         self._standard_timings = standard_timings
+        self._descriptors = descriptors
+
 
 
     @EdidProperty
@@ -192,19 +216,20 @@ class BaseEDID(ByteBlock):
 
     # ===============================================================================================
 
+    @EdidProperty
+    def descriptors(self):
+        return self._descriptors
 
-    @property
-    def as_bytes(self):
-        return (
-                self.header.as_bytes +
-                self.basic_display_parameters.as_bytes +
-                self.chromaticity_coordinates.as_bytes +
-                self.established_timing.as_bytes +
-                self.standard_timings.as_bytes
-            )
+    @descriptors.setter
+    def descriptors(self, value):
+        self._descriptors = value
 
-    def __str__(self):
-        return bytes_to_hex_block(self.as_bytes)
+    @descriptors.byte_converter
+    def descriptors(value):
+
+        return reduce(lambda x, y: x + y, [descriptor.as_bytes for descriptor in value])
+
+    descriptors.byte_range = [54,126]
 
 class Header(ByteBlock):
 
@@ -572,7 +597,7 @@ class StandardTiming(ByteBlock):
 
     @x_resolution.byte_converter
     def x_resolution(value):
-        return (int(value / 8 - 31) & int('0xFF',0) ).to_bytes()
+        return (int(value / 8 - 31) & LSB8_BITMASK).to_bytes()
 
     x_resolution.byte_range = [0,1]
 
@@ -605,3 +630,193 @@ class StandardTiming(ByteBlock):
 
 
     vertical_timing.byte_range = [1,2]
+
+class DetailedTimingDescriptor(ByteBlock):
+    def __init__(
+            self,
+            pixel_clock=594,
+            hor_pixels=3840,
+            hor_blnk_pixels=560,
+            vert_pixels=2160,
+            vert_blnk_pixels=90,
+            hor_front_porch=176,
+            hor_synch_pulse=88,
+            ver_front_porch=71,
+            ver_synch_pulse=73
+        ):
+
+        assert 0.01 <= pixel_clock <= 655.35, 'Pixel clock must be between 0.01 - 655.35 MHz'
+
+        self._pixel_clock = pixel_clock
+        self._hor_pixels = hor_pixels
+        self._hor_blnk_pixels = hor_blnk_pixels
+        self._vert_pixels = vert_pixels
+        self._vert_blnk_pixels = vert_blnk_pixels
+        self._hor_front_porch = hor_front_porch
+        self._hor_synch_pulse = hor_synch_pulse
+        self._ver_front_porch = ver_front_porch
+        self._ver_synch_pulse = ver_synch_pulse
+
+
+    @EdidProperty
+    def pixel_clock(self):
+        return self._pixel_clock
+
+    @pixel_clock.setter
+    def pixel_clock(self, value):
+        self._pixel_clock = value
+
+    @pixel_clock.byte_converter
+    def pixel_clock(value):
+        return (value * 100).to_bytes(2, 'little')
+
+    pixel_clock.byte_range = [0,2]
+
+    # ===============================================================================================
+
+    @EdidProperty
+    def hor_pixels(self):
+        return self._hor_pixels
+
+    @hor_pixels.setter
+    def hor_pixels(self, value):
+        self._hor_pixels = value
+
+    @hor_pixels.byte_converter
+    def hor_pixels(value):
+        return (value & LSB8_BITMASK).to_bytes()
+
+    hor_pixels.byte_range = [2,3]
+
+    # ===============================================================================================
+
+    @EdidProperty
+    def hor_blnk_pixels(self):
+        return self._hor_blnk_pixels
+
+    @hor_blnk_pixels.setter
+    def hor_blnk_pixels(self, value):
+        self._hor_blnk_pixels = value
+
+    @hor_blnk_pixels.byte_converter
+    def hor_blnk_pixels(value):
+        return (value & LSB8_BITMASK).to_bytes()
+
+    hor_blnk_pixels.byte_range = [3,4]
+
+    # ===============================================================================================
+
+    @EdidProperty
+    def hor_act_blank_msb(self):
+        # https://glenwing.github.io/docs/VESA-EEDID-A2.pdf#page=33
+        # horizontal pixels are 12 bit numbers
+        return int(format((self._hor_pixels >> 8) & 15, '04b')[:4] + format((self._hor_blnk_pixels >> 8) & 15, '04b')[:4],2)
+
+    hor_act_blank_msb.byte_range = [4,5]
+
+    # ===============================================================================================
+
+    @EdidProperty
+    def vert_pixels(self):
+        return self._vert_pixels
+
+    @vert_pixels.setter
+    def vert_pixels(self, value):
+        self._vert_pixels = value
+
+    @vert_pixels.byte_converter
+    def vert_pixels(value):
+        return (value & LSB8_BITMASK).to_bytes()
+
+    vert_pixels.byte_range = [5,6]
+
+    # ===============================================================================================
+
+    @EdidProperty
+    def vert_blnk_pixels(self):
+        return self._vert_blnk_pixels
+
+    @vert_blnk_pixels.setter
+    def vert_blnk_pixels(self, value):
+        self._vert_blnk_pixels = value
+
+    @vert_blnk_pixels.byte_converter
+    def vert_blnk_pixels(value):
+        return (value & LSB8_BITMASK).to_bytes()
+
+    vert_blnk_pixels.byte_range = [6,7]
+
+    # ===============================================================================================
+
+    @EdidProperty
+    def vert_act_blank_msb(self):
+        # https://glenwing.github.io/docs/VESA-EEDID-A2.pdf#page=33
+        # horizontal pixels are 12 bit numbers
+        return (((self._vert_pixels >> 8) & LSB4_BITMASK ) << 4 ) + ( (self._vert_blnk_pixels >> 8) & LSB4_BITMASK )
+
+    vert_act_blank_msb.byte_range = [7,8]
+
+    # ===============================================================================================
+
+    @EdidProperty
+    def hor_front_porch(self):
+        return self._hor_front_porch
+
+    @hor_front_porch.setter
+    def hor_front_porch(self, value):
+        self._hor_front_porch = value
+
+    @hor_front_porch.byte_converter
+    def hor_front_porch(value):
+        return (value & LSB8_BITMASK).to_bytes()
+
+    hor_front_porch.byte_range = [8,9]
+
+    # ===============================================================================================
+
+    @EdidProperty
+    def hor_synch_pulse(self):
+        return self._hor_synch_pulse
+
+    @hor_synch_pulse.setter
+    def hor_synch_pulse(self, value):
+        self._hor_synch_pulse = value
+
+    @hor_synch_pulse.byte_converter
+    def hor_synch_pulse(value):
+        return (value & LSB8_BITMASK).to_bytes()
+
+    hor_synch_pulse.byte_range = [9,10]
+
+    # ===============================================================================================
+    # TODO THIS IS ALL WRONG
+    @EdidProperty
+    def ver_front_porch(self):
+        return self._ver_front_porch
+
+    @ver_front_porch.setter
+    def ver_front_porch(self, value):
+        self._ver_front_porch = value
+
+    @ver_front_porch.byte_converter
+    def ver_front_porch(value):
+        return (value & LSB4_BITMASK).to_bytes()
+
+    ver_front_porch.byte_range = [10,11]
+
+    # ===============================================================================================
+
+    @EdidProperty
+    def ver_synch_pulse(self):
+        return self._ver_synch_pulse
+
+    @ver_synch_pulse.setter
+    def ver_synch_pulse(self, value):
+        self._ver_synch_pulse = value
+
+    @ver_synch_pulse.byte_converter
+    def ver_synch_pulse(value):
+        return (value & LSB4_BITMASK).to_bytes()
+
+    ver_synch_pulse.byte_range = [11,12]
+

@@ -1,6 +1,6 @@
 import itertools
 
-from edid_models import BaseEDID, Header, BasicDisplayParameters, ChromaticityCoordinates, StandardTiming
+from edid_models import *
 from math import floor
 
 
@@ -22,7 +22,7 @@ def simple_test(test_class, expected):
             highlight_match += f'\033[91m{act}\033[0m'
             bad_bytes.append(floor(idx / 3))
 
-    bad_bytes = set(bad_bytes)
+    bad_bytes = sorted(set(bad_bytes))
 
     if len(bad_bytes) > 0:
 
@@ -80,11 +80,19 @@ standardTiming = StandardTiming(
     vertical_freq=60
 )
 
+detailedTimingDescriptor = DetailedTimingDescriptor(
+    pixel_clock = 594,
+    hor_pixels = 3840,
+    hor_blnk_pixels = 560
+)
+
+
 base_edid = BaseEDID(
     header = header,
     basic_display_parameters = displayParameters,
     chromaticity_coordinates = chromaticityCoordinates,
-    standard_timings = standardTiming
+    standard_timings = standardTiming,
+    descriptors = [detailedTimingDescriptor] *4
 )
 
 simple_test(base_edid, expected)

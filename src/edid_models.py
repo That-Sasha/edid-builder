@@ -2,7 +2,6 @@ import re
 import string
 
 from functools import reduce
-from math import ceil, log
 from textwrap import wrap
 
 def bytes_to_hex_block(byte_array, width=16):
@@ -327,7 +326,6 @@ class Header(ByteBlock):
 
     edid_version.byte_range = [19,20]
 
-
 class BasicDisplayParameters(ByteBlock):
 
     def __init__(self, video_params='B5', horizontal_size=100, vertical_size=56, gamma=2.2, suported_features='FF'):
@@ -414,7 +412,6 @@ class BasicDisplayParameters(ByteBlock):
         return bytes.fromhex(value)
 
     suported_features.byte_range = [4,5]
-
 
 class ChromaticityCoordinates(ByteBlock):
 
@@ -548,7 +545,6 @@ class ChromaticityCoordinates(ByteBlock):
 
     white_xy_msb.byte_range = [6,7]
 
-
 class StandardTiming(ByteBlock):
 
     @staticmethod
@@ -576,8 +572,7 @@ class StandardTiming(ByteBlock):
 
     @x_resolution.byte_converter
     def x_resolution(value):
-        num_bytes = ceil( log(value, 2) / 8)
-        return int(value / 8 - 31).to_bytes(num_bytes)[-1:]
+        return (int(value / 8 - 31) & int('0xFF',0) ).to_bytes()
 
     x_resolution.byte_range = [0,1]
 

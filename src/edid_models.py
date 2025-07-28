@@ -50,22 +50,53 @@ class EdidProperty:
     def byte_converter(self, converter):
         return type(self)(self._getter, self._setter, self._byte_range, converter)
 
-    def _byte_range_setter(self, value):
-        self._byte_range = value
-
-    # This is hacky and I don't like it, but it seems to work
+    # This is hacky and I don't like it, but it works
     @property
     def byte_range():
         pass
 
     @byte_range.setter
     def byte_range(self, value):
-        self._byte_range_setter(value)
+        self._byte_range = value
 
-class BaseEDID:
+class ByteBlock:
+
+    def data_at_position(self, value):
+        # returns the data that contains the specified byte
+        properties = [a for a in dir(self) if 'EdidPropertyValue' in str(type(getattr(self, a)))]
+
+        for prop in properties:
+            byte_range = getattr(self, prop).byte_range
+
+            if value in range(*byte_range):
+                prop_value = getattr(self, prop).value
+
+                if 'data_at_position' in dir(prop_value):
+                    prop_value = prop_value.data_at_position(value - byte_range[0])
+
+                return {'name' : prop, 'value' : prop_value, 'range' : byte_range}
+
+        return False
+
+    @property
+    def as_bytes(self):
+        # Prevent infinite recursion
+        members = dir(self)
+        members.remove('as_bytes')
+
+        properties = [getattr(self,a) for a in members if 'EdidPropertyValue' in str(type(getattr(self, a)))]
+        sorted_properties = sorted(properties, key=lambda prop: (prop.byte_range[0]))
+
+        return reduce(lambda x, y: x + y, [prop.as_bytes for prop in sorted_properties])
+
+    def __str__(self):
+        return bytes_to_hex_block(self.as_bytes)
+
+class BaseEDID(ByteBlock):
     def __init__(self, header, basic_display_parameters, chromaticity_coordinates, standard_timings, established_timing='000000'):
         if not isinstance(standard_timings, list):
             standard_timings = [standard_timings]
+
         assert all(c in string.hexdigits for c in established_timing), 'Red green lsb must be a 6 digit hexadecimal string'
         assert all(isinstance(timing, StandardTiming) for timing in standard_timings) and 1 <= len(standard_timings) <= 8, 'Standard timings must be a list of at least 1 and at most 8 standard timing objects'
 
@@ -73,7 +104,6 @@ class BaseEDID:
         self._basic_display_parameters = basic_display_parameters
         self._chromaticity_coordinates = chromaticity_coordinates
         self._established_timing = established_timing
-
         self._standard_timings = standard_timings
 
 
@@ -174,30 +204,10 @@ class BaseEDID:
                 self.standard_timings.as_bytes
             )
 
-    def data_at_position(self, value):
-        # TODO - factor ths out and add an offset value or something to calculate absolute position
-        # returns the data that contains the specified byte
-        properties = [a for a in dir(self) if 'EdidPropertyValue' in str(type(getattr(self, a)))]
-
-        for prop in properties:
-            byte_range = getattr(self, prop).byte_range
-            print(byte_range)
-            if value in range(*byte_range):
-                prop_value = getattr(self, prop).value
-
-                if 'data_at_position' in dir(prop_value):
-                    prop_value = prop_value.data_at_position(value)
-
-                return {'name' : prop, 'value' : prop_value, 'range' : byte_range}
-
-        return False
-
     def __str__(self):
         return bytes_to_hex_block(self.as_bytes)
 
-class Header:
-
-    HEADER_PATTERN = "00 FF FF FF FF FF FF 00"
+class Header(ByteBlock):
 
     def __init__(self, manufacturer_id='YTS', product_code='B106', serial_num=0, manufacture_week=0, manufacture_year=2025, edid_version='1.4'):
 
@@ -215,6 +225,16 @@ class Header:
         self._manufacture_week = manufacture_week
         self._manufacture_year = manufacture_year
         self._edid_version = edid_version
+
+    @EdidProperty
+    def fixed_pattern(self):
+        return "00FFFFFFFFFFFF00"
+
+    @fixed_pattern.byte_converter
+    def fixed_pattern(value):
+        return bytes.fromhex(value)
+
+    fixed_pattern.byte_range = [0,8]
 
 
     @EdidProperty
@@ -307,37 +327,8 @@ class Header:
 
     edid_version.byte_range = [19,20]
 
-    # ===============================================================================================
 
-    @property
-    def as_bytes(self):
-        return (
-            bytes.fromhex(self.HEADER_PATTERN)
-            + self.manufacturer_id.as_bytes
-            + self.product_code.as_bytes
-            + self.serial_num.as_bytes
-            + self.manufacture_week.as_bytes
-            + self.manufacture_year.as_bytes
-            + self.edid_version.as_bytes
-            )
-
-    def data_at_position(self, value):
-        # returns the data that contains the specified byte
-        properties = [a for a in dir(self) if 'EdidPropertyValue' in str(type(getattr(self, a)))]
-
-        for prop in properties:
-            print(prop)
-            byte_range = getattr(self, prop).byte_range
-            if value in range(*byte_range):
-                return {'name' : prop, 'value' : getattr(self, prop).value, 'range' : byte_range}
-
-
-        return False
-
-    def __str__(self):
-        return bytes_to_hex_block(self.as_bytes)
-
-class BasicDisplayParameters:
+class BasicDisplayParameters(ByteBlock):
 
     def __init__(self, video_params='B5', horizontal_size=100, vertical_size=56, gamma=2.2, suported_features='FF'):
 
@@ -424,33 +415,8 @@ class BasicDisplayParameters:
 
     suported_features.byte_range = [4,5]
 
-    # ===============================================================================================
 
-    @property
-    def as_bytes(self):
-        return (
-                self.video_params.as_bytes +
-                self.horizontal_size.as_bytes +
-                self.vertical_size.as_bytes +
-                self.gamma.as_bytes +
-                self.suported_features.as_bytes
-            )
-
-    def data_at_position(self, value):
-        # returns the data that contains the specified byte
-        properties = [a for a in dir(self) if (f'.{a}.<locals>.'.join(list(map(lambda x: type(x).__name__, [self, getattr(self, a)]))))  in str(type(getattr(self, a)))]
-        for prop in properties:
-            byte_range = getattr(self, prop).byte_range
-            if value in range(*byte_range):
-                return {'name' : prop, 'value' : getattr(self, prop).value, 'range' : byte_range}
-
-
-        return False
-
-    def __str__(self):
-        return bytes_to_hex_block(self.as_bytes)
-
-class ChromaticityCoordinates:
+class ChromaticityCoordinates(ByteBlock):
 
     def __init__(self, red_green_lsb='5E', blue_white_lsb='C0', red_x_msb='A4', red_y_msb='59', green_xy_msb='4A98', blue_xy_msb='2520', white_xy_msb='5054'):
 
@@ -582,35 +548,8 @@ class ChromaticityCoordinates:
 
     white_xy_msb.byte_range = [6,7]
 
-    # ===============================================================================================
 
-    @property
-    def as_bytes(self):
-        return (
-                self.red_green_lsb.as_bytes +
-                self.blue_white_lsb.as_bytes +
-                self.red_x_msb.as_bytes +
-                self.red_y_msb.as_bytes +
-                self.green_xy_msb.as_bytes +
-                self.blue_xy_msb.as_bytes +
-                self.white_xy_msb.as_bytes
-            )
-
-    def data_at_position(self, value):
-        # returns the data that contains the specified byte
-        properties = [a for a in dir(self) if (f'.{a}.<locals>.'.join(list(map(lambda x: type(x).__name__, [self, getattr(self, a)]))))  in str(type(getattr(self, a)))]
-        for prop in properties:
-            byte_range = getattr(self, prop).byte_range
-            if value in range(*byte_range):
-                return {'name' : prop, 'value' : getattr(self, prop).value, 'range' : byte_range}
-
-
-        return False
-
-    def __str__(self):
-        return bytes_to_hex_block(self.as_bytes)
-
-class StandardTiming:
+class StandardTiming(ByteBlock):
 
     @staticmethod
     def empty():
@@ -671,28 +610,3 @@ class StandardTiming:
 
 
     vertical_timing.byte_range = [1,2]
-
-    # ===============================================================================================
-
-    @property
-    def as_bytes(self):
-        return (
-                self.x_resolution.as_bytes +
-                self.vertical_timing.as_bytes
-            )
-
-    def data_at_position(self, value):
-        # returns the data that contains the specified byte
-        properties = [a for a in dir(self) if (f'.{a}.<locals>.'.join(list(map(lambda x: type(x).__name__, [self, getattr(self, a)]))))  in str(type(getattr(self, a)))]
-        for prop in properties:
-            byte_range = getattr(self, prop).byte_range
-            if value in range(*byte_range):
-                return {'name' : prop, 'value' : getattr(self, prop).value, 'range' : byte_range}
-
-
-        return False
-
-    def __str__(self):
-        return bytes_to_hex_block(self.as_bytes)
-
-

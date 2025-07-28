@@ -735,7 +735,6 @@ class StandardTiming:
         return bytes_to_hex_block(self.as_bytes)
 
 
-
 # Simple test case
 with(open('3840x2160.hex', 'r')) as file:
     expected = file.read()
@@ -774,7 +773,6 @@ standardTiming = StandardTiming(
     vertical_freq=60
 )
 
-
 base_edid = BaseEDID(
     header = header,
     basic_display_parameters = displayParameters,
@@ -783,4 +781,3 @@ base_edid = BaseEDID(
 )
 
 simple_test(base_edid, expected)
-

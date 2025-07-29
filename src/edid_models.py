@@ -349,7 +349,7 @@ class Header(ByteBlock):
     def edid_version(value):
         return bytes([int(x) for x in value.split('.')])
 
-    edid_version.byte_range = [19,20]
+    edid_version.byte_range = [18,20]
 
 class BasicDisplayParameters(ByteBlock):
 
@@ -536,7 +536,7 @@ class ChromaticityCoordinates(ByteBlock):
     def green_xy_msb(value):
         return bytes.fromhex(value)
 
-    green_xy_msb.byte_range = [4,5]
+    green_xy_msb.byte_range = [4,6]
 
     # ===============================================================================================
 
@@ -552,7 +552,7 @@ class ChromaticityCoordinates(ByteBlock):
     def blue_xy_msb(value):
         return bytes.fromhex(value)
 
-    blue_xy_msb.byte_range = [5,6]
+    blue_xy_msb.byte_range = [6,8]
 
     # ===============================================================================================
 
@@ -568,7 +568,7 @@ class ChromaticityCoordinates(ByteBlock):
     def white_xy_msb(value):
         return bytes.fromhex(value)
 
-    white_xy_msb.byte_range = [6,7]
+    white_xy_msb.byte_range = [8,10]
 
 class StandardTiming(ByteBlock):
 

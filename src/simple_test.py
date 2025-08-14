@@ -1,10 +1,64 @@
 import itertools
+import re
 
 from edid_models import *
-from math import floor
+from math import ceil, floor
 
 
-def simple_test(test_class, expected):
+def get_parameters(object, field_name, first_byte_relative):
+    parameters = []
+    child_prop_names = [a for a in dir(object) if 'EdidPropertyValue' in str(type(getattr(object, a)))]
+
+    child_prop_names= sorted(child_prop_names, key = lambda name: (getattr(object, name).byte_range[0]))
+
+    for child_name in child_prop_names:
+
+        child_wrapper = getattr(object, child_name)
+        child_instance = child_wrapper.value
+
+        grandchild_props_names = [a for a in dir(child_instance) if 'EdidPropertyValue' in str(type(getattr(child_instance, a)))]
+
+        byte_range = child_wrapper.byte_range
+
+        child_start_byte = first_byte_relative + byte_range[0]
+        child_end_byte = first_byte_relative + byte_range[1] - 1
+
+        if isinstance(child_instance, list):
+            if all(isinstance(child_item, ByteBlock) for child_item in child_instance):
+                block_size = (byte_range[1] - byte_range[0]) / len(child_instance)
+
+                for num, child_item in enumerate(child_instance):
+
+                    parameters.extend(get_parameters(child_item, f'{child_name}{num}', child_start_byte + num * block_size))
+            else:
+                parameters.append({'field' : child_name, 'instance' : child_wrapper, 'bytes' : [int(child_start_byte), int(child_end_byte)]})
+        elif grandchild_props_names:
+            parameters.extend(get_parameters(child_instance, child_name, first_byte_relative + byte_range[0]))
+        else:
+            parameters.append({'field' : child_name, 'instance' : child_wrapper, 'bytes' : [int(child_start_byte), int(child_end_byte)]})
+
+    return list(map(lambda x: {'field' : f'{field_name}.{x['field']}', 'instance' : x['instance'], 'bytes' : x['bytes']}, parameters))
+
+def describe_params(object, field_name):
+    parameters = get_parameters(object, field_name, 0)
+    parameters = list(map(lambda x: {'field' : x['field'], 'instance' : x['instance'], 'bytes' : f'{x['bytes'][0]} - {x['bytes'][1]}', 'hex' : ' '.join(format(byte, '02x') for byte in x['instance'].as_bytes).upper(), 'value' : x['instance'].value}, parameters))
+
+    widths = {}
+    columns = ['Bytes', 'Field', 'Hex', 'Value']
+
+    for key in columns:
+        max_width = max([len(str(x)) for x in [param[key.lower()] for param in parameters]])
+        widths[key.lower()] = (ceil(max_width / 5) + 1 ) * 5
+
+    # Header
+    rows = [''.join([col.ljust(widths[col.lower()]) for col in columns])]
+
+    for param in parameters:
+        rows.append(''.join([str(param[col.lower()]).ljust(widths[col.lower()]) for col in columns]))
+
+    return rows
+
+def simple_test(test_class, expected, print_bad_bytes=True):
 
     actual = str(test_class)
 
@@ -25,17 +79,25 @@ def simple_test(test_class, expected):
     bad_bytes = sorted(set(bad_bytes))
 
     if len(bad_bytes) > 0:
-
-        bad_data_dicts = [test_class.data_at_position(x) for x in bad_bytes]
-
-        error_string = '\n'.join([
+        error_string = [
             '\nMismatch in bytes: ' + ', '.join([str(x) for x in bad_bytes]),
             '',
             highlight_match,
-            '\033[95m',
-            'Bad fields: ',
-            *[str(i) for n, i in enumerate(bad_data_dicts) if i not in bad_data_dicts[n + 1:]]
-        ])
+            '\033[95m'
+        ]
+
+        if print_bad_bytes:
+            error_string += 'Bad fields: '
+
+            all_params = describe_params(test_class, test_class.__class__.__name__)
+            error_string.append(all_params[0])
+
+            for bad_byte in bad_bytes:
+                for param in all_params[1:]:
+                    if bad_byte in range(int(param.split(' ')[0]), int(param.split(' ')[2]) + 1) and param not in error_string:
+                        error_string.append(param)
+
+        error_string = '\n'.join(error_string)
 
         assert False, error_string
     else:
@@ -95,4 +157,10 @@ base_edid = BaseEDID(
     descriptors = [detailedTimingDescriptor] *4
 )
 
-simple_test(base_edid, expected)
+simple_test(base_edid, expected, print_bad_bytes=False)
+
+rows = describe_params(base_edid, 'base_edid')
+
+[print(row) for row in rows]
+print()
+print(f'Edid built from {len(rows)} unique parameters')

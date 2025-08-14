@@ -674,8 +674,8 @@ class DetailedTimingDescriptor(ByteBlock):
             vert_blnk_pixels=90,
             hor_front_porch=176,
             hor_synch_pulse=88,
-            ver_front_porch=71,
-            ver_synch_pulse=73
+            vert_front_porch=8,
+            vert_synch_pulse=10
         ):
 
         assert 0.01 <= pixel_clock <= 655.35, 'Pixel clock must be between 0.01 - 655.35 MHz'
@@ -687,8 +687,8 @@ class DetailedTimingDescriptor(ByteBlock):
         self._vert_blnk_pixels = vert_blnk_pixels
         self._hor_front_porch = hor_front_porch
         self._hor_synch_pulse = hor_synch_pulse
-        self._ver_front_porch = ver_front_porch
-        self._ver_synch_pulse = ver_synch_pulse
+        self._vert_front_porch = vert_front_porch
+        self._vert_synch_pulse = vert_synch_pulse
 
 
     @EdidProperty
@@ -801,6 +801,8 @@ class DetailedTimingDescriptor(ByteBlock):
 
     @hor_front_porch.byte_converter
     def hor_front_porch(value):
+        # https://glenwing.github.io/docs/VESA-EEDID-A2.pdf#page=33
+        # horizontal porch is a 10 bit number
         return (value & LSB8_BITMASK).to_bytes()
 
     hor_front_porch.byte_range = [8,9]
@@ -817,39 +819,34 @@ class DetailedTimingDescriptor(ByteBlock):
 
     @hor_synch_pulse.byte_converter
     def hor_synch_pulse(value):
+        # https://glenwing.github.io/docs/VESA-EEDID-A2.pdf#page=33
+        # horizontal sync is a 10 bit number
         return (value & LSB8_BITMASK).to_bytes()
 
     hor_synch_pulse.byte_range = [9,10]
 
     # ===============================================================================================
-    # TODO THIS IS ALL WRONG
+
     @EdidProperty
-    def ver_front_porch(self):
-        return self._ver_front_porch
+    def vert_porch_sync_lsb(self):
+        # https://glenwing.github.io/docs/VESA-EEDID-A2.pdf#page=33
+        # vertical sync and porch are 6 bit numbers
+        return ((self._vert_front_porch & LSB4_BITMASK ) << 4 ) + ( self._vert_synch_pulse & LSB4_BITMASK )
 
-    @ver_front_porch.setter
-    def ver_front_porch(self, value):
-        self._ver_front_porch = value
-
-    @ver_front_porch.byte_converter
-    def ver_front_porch(value):
-        return (value & LSB4_BITMASK).to_bytes()
-
-    ver_front_porch.byte_range = [10,11]
+    vert_porch_sync_lsb.byte_range = [10,11]
 
     # ===============================================================================================
 
     @EdidProperty
-    def ver_synch_pulse(self):
-        return self._ver_synch_pulse
+    def porch_sync_msb(self):
+        return (
+                    ((self._hor_front_porch & ~LSB8_BITMASK ) >> 2 )
+                    + (( self._hor_synch_pulse & ~LSB8_BITMASK ) >> 4 )
+                    + (( self._vert_front_porch & ~LSB4_BITMASK ) >> 2 )
+                    + (( self._vert_synch_pulse & ~LSB4_BITMASK ) >> 4 )
+                )
 
-    @ver_synch_pulse.setter
-    def ver_synch_pulse(self, value):
-        self._ver_synch_pulse = value
+    porch_sync_msb.byte_range = [11,12]
 
-    @ver_synch_pulse.byte_converter
-    def ver_synch_pulse(value):
-        return (value & LSB4_BITMASK).to_bytes()
-
-    ver_synch_pulse.byte_range = [11,12]
+    # ===============================================================================================
 

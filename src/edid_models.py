@@ -23,6 +23,17 @@ class EdidPropertyValue:
     def byte_range(self):
         return self._byte_range
 
+    @property
+    def block_size(self):
+        if isinstance(self.value, list):
+            size = (self._byte_range[1] - self._byte_range[0]) / len(self.value)
+        else:
+            size = self._byte_range[1] - self._byte_range[0]
+
+        assert (size % 1) == 0, f'Non integer block size found for {self.value.__class__.__name__}'
+
+        return int(size)
+
 class EdidProperty:
 
     def __init__(self, getter, setter=None, byte_range=None, byte_converter = lambda x: x.to_bytes()):
@@ -72,12 +83,13 @@ class ByteBlock:
             byte_range = getattr(self, prop).byte_range
 
             if position in range(*byte_range):
-                prop_value = getattr(self, prop).value
+                prop_inst = getattr(self, prop)
+                prop_value = prop_inst.value
 
                 if isinstance(prop_value, list):
                     if all('data_at_position' in dir(prop) for prop in prop_value):
 
-                        block_size = (byte_range[1] - byte_range[0]) / len(prop_value)
+                        block_size = prop_inst.block_size
 
                         depth = position - byte_range[0]
                         block_num = floor(depth / block_size)
@@ -105,8 +117,29 @@ class ByteBlock:
 
         properties = [getattr(self,a) for a in members if 'EdidPropertyValue' in str(type(getattr(self, a)))]
         sorted_properties = sorted(properties, key=lambda prop: (prop.byte_range[0]))
+        sorted_prop_lengths = [prop.block_size for prop in sorted_properties]
 
-        return reduce(lambda x, y: x + y, [prop.as_bytes for prop in sorted_properties])
+        bytes_list = []
+
+        for prop, length in zip(sorted_properties, sorted_prop_lengths):
+            prop_bytes = bytes(0)
+
+            # Pad each item in list individually
+            if isinstance(prop.value, list):
+                for idx, item in enumerate(prop.value):
+                    if len(item.as_bytes) > length:
+                        raise Exception(f'returned more bytes than size of byte range for {item.__class__.__name__}{idx}')
+                    prop_bytes = prop_bytes + item.as_bytes + bytes(length - len(item.as_bytes))
+
+            elif len(prop.as_bytes) > length:
+                raise Exception(f'returned more bytes than size of byte range for {prop.value.__class__.__name__}')
+
+            else:
+                prop_bytes = prop.as_bytes + bytes(length - len(prop.as_bytes))
+
+            bytes_list.append(prop_bytes)
+
+        return reduce(lambda x, y: x + y, bytes_list)
 
     def __str__(self):
         return bytes_to_hex_block(self.as_bytes)

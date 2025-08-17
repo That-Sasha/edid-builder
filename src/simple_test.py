@@ -87,7 +87,7 @@ def simple_test(test_class, expected, print_bad_bytes=True):
         ]
 
         if print_bad_bytes:
-            error_string += 'Bad fields: '
+            error_string.append('Bad fields: ')
 
             all_params = describe_params(test_class, test_class.__class__.__name__)
             error_string.append(all_params[0])

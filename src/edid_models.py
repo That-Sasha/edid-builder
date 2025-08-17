@@ -927,6 +927,10 @@ class DetailedTimingDescriptor(ByteBlock):
     def hor_size_mm(self):
         return self._hor_size_mm & LSB8_BITMASK
 
+    @hor_size_mm.setter
+    def hor_size_mm(self, value):
+        self._hor_size_mm = value
+
     hor_size_mm.byte_range = 12
 
     # ===============================================================================================
@@ -934,6 +938,10 @@ class DetailedTimingDescriptor(ByteBlock):
     @EdidProperty
     def vert_size_mm(self):
         return self._vert_size_mm & LSB8_BITMASK
+
+    @vert_size_mm.setter
+    def vert_size_mm(self, value):
+        self._vert_size_mm = value
 
     vert_size_mm.byte_range = 13
 
@@ -951,6 +959,10 @@ class DetailedTimingDescriptor(ByteBlock):
     def hor_border_pixels(self):
         return self._hor_border_pixels
 
+    @hor_border_pixels.setter
+    def hor_border_pixels(self, value):
+        self._hor_border_pixels = value
+
     hor_border_pixels.byte_range = 15
 
     # ===============================================================================================
@@ -958,6 +970,10 @@ class DetailedTimingDescriptor(ByteBlock):
     @EdidProperty
     def vert_border_pixels(self):
         return self._vert_border_pixels
+
+    @vert_border_pixels.setter
+    def vert_border_pixels(self, value):
+        self._vert_border_pixels = value
 
     vert_border_pixels.byte_range = 16
 

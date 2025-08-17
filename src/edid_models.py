@@ -710,7 +710,6 @@ class DetailedTimingDescriptor(ByteBlock):
         INTERLEAVED_FOUR_WAY=5
         INTERLEAVED_SBS=6
 
-    @staticmethod
     class AnalogueSync():
 
         def __init__(self, serration=False, bipolar=False, sync_on_rgb=False):
@@ -726,7 +725,6 @@ class DetailedTimingDescriptor(ByteBlock):
                 + ( self._sync_on_rgb )
             )
 
-    @staticmethod
     class DigitalSync():
 
         def __init__(self, serration=False, positive_sync_polarity=False):
@@ -741,7 +739,6 @@ class DetailedTimingDescriptor(ByteBlock):
                 + ( self._positive_sync_polarity )
             )
 
-    @staticmethod
     class DigitalSeparateSync():
 
         def __init__(self, positive_vert_sync_polarity=True, positive_hor_sync_polarity=True):

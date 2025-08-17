@@ -1017,3 +1017,188 @@ class DetailedTimingDescriptor(ByteBlock):
         )
 
     features.byte_range = 17
+
+class MonitorDescriptor(ByteBlock):
+
+    class DescriptorType(Enum):
+        DUMMY=0x10
+        ADDITIONAL_STANDARD_TIMING_3=0xF7
+        CVT_TIMING_CODES=0xF8
+        DISPLAY_COLOR_MANAGEMENT=0xF9
+        ADDITIONAL_STANDARD_TIMING_6x2BYTE=0xFA
+        ADDITIONAL_STANDARD_TIMING_2x5BYTE=0xFB
+        MONITOR_NAME=0xFC
+        MONITOR_RANGE_LIMITS=0xFD
+        TEXT=0xFE
+        MONITOR_SERIAL_NUMBER=0xFF
+
+    def __init__(self, descriptor_data):
+        self._descriptor_data = descriptor_data
+
+    @EdidProperty
+    def monitor_descriptor_header(self):
+        print(self.edid_prop_names)
+        return 0
+
+    monitor_descriptor_header.byte_range = [0,3]
+
+class MonitorRangeLimits(MonitorDescriptor):
+
+    class ExtendedTimingInfoType(Enum):
+        DEFAULT_GTF=0x00
+        NONE=0x01
+        SECONDARY_GTF=0x02
+        CVT=0x04
+
+    def __init__(
+            self,
+            hor_offset_max=0,
+            hor_offset_min=0,
+            vert_offset_max=0,
+            vert_offset_min=0,
+            vert_freq_min=59,
+            vert_freq_max=61,
+            hor_freq_min=134,
+            hor_freq_max=136,
+            pixel_clock_freq_max=60,
+            extended_timing_info_type=ExtendedTimingInfoType.DEFAULT_GTF,
+            video_timing_parameters=None
+            ):
+        self._hor_offset_max = hor_offset_max
+        self._hor_offset_min = hor_offset_min
+        self._vert_offset_max = vert_offset_max
+        self._vert_offset_min = vert_offset_min
+        self._vert_freq_min = vert_freq_min
+        self._vert_freq_max = vert_freq_max
+        self._hor_freq_min = hor_freq_min
+        self._hor_freq_max = hor_freq_max
+        self._pixel_clock_freq_max = pixel_clock_freq_max
+        self._extended_timing_info_type = extended_timing_info_type
+        self._video_timing_parameters = video_timing_parameters
+
+    @EdidProperty
+    def type(self):
+        return MonitorDescriptor.DescriptorType.MONITOR_RANGE_LIMITS
+
+    @type.byte_converter
+    def type(value):
+        return value.value.to_bytes()
+
+    type.byte_range = 3
+
+    # ===============================================================================================
+
+    @EdidProperty
+    def range_limit_offsets(self):
+        return (
+            self._hor_offset_max << 3
+            + self._hor_offset_min << 2
+            + self._vert_offset_max << 1
+            + self._vert_offset_min
+        )
+
+    range_limit_offsets.byte_range = 4
+
+    # ===============================================================================================
+
+    @EdidProperty
+    def vert_freq_min(self):
+        return self._vert_freq_min
+
+    @vert_freq_min.setter
+    def vert_freq_min(self, value):
+        self._vert_freq_min = value
+
+    vert_freq_min.byte_range = 5
+
+    # ===============================================================================================
+
+    @EdidProperty
+    def vert_freq_max(self):
+        return self._vert_freq_max
+
+    @vert_freq_max.setter
+    def vert_freq_max(self, value):
+        self._vert_freq_max = value
+
+    vert_freq_max.byte_range = 6
+
+    # ===============================================================================================
+
+    @EdidProperty
+    def hor_freq_min(self):
+        return self._hor_freq_min
+
+    @hor_freq_min.setter
+    def hor_freq_min(self, value):
+        self._hor_freq_min = value
+
+    hor_freq_min.byte_range = 7
+
+    # ===============================================================================================
+
+    @EdidProperty
+    def hor_freq_max(self):
+        return self._hor_freq_max
+
+    @hor_freq_max.setter
+    def hor_freq_max(self, value):
+        self._hor_freq_max = value
+
+    hor_freq_max.byte_range = 8
+
+    # ===============================================================================================
+
+    @EdidProperty
+    def pixel_clock_freq_max(self):
+        return self._pixel_clock_freq_max
+
+    @pixel_clock_freq_max.setter
+    def pixel_clock_freq_max(self, value):
+        self._pixel_clock_freq_max = value
+
+    pixel_clock_freq_max.byte_range = 9
+
+    # ===============================================================================================
+
+    @EdidProperty
+    def extended_timing_info_type(self):
+        return self._extended_timing_info_type
+
+    @extended_timing_info_type.setter
+    def extended_timing_info_type(self, value):
+        self._extended_timing_info_type = value
+
+    @extended_timing_info_type.byte_converter
+    def extended_timing_info_type(value):
+        return value.value.to_bytes()
+
+    extended_timing_info_type.byte_range = 10
+
+    # ===============================================================================================
+
+    @EdidProperty
+    def video_timing_parameters(self):
+        return self._video_timing_parameters
+
+    @video_timing_parameters.setter
+    def video_timing_parameters(self, value):
+        self._video_timing_parameters = value
+
+    @video_timing_parameters.byte_converter
+    def video_timing_parameters(value):
+        if value is not None:
+            byte_val = value.to_bytes()
+        else:
+            byte_val = bytes()
+
+        length = len(byte_val)
+        padding = (0x20).to_bytes() * ( 6 - length )
+
+        return (
+            byte_val
+            + 0x0A.to_bytes()
+            + padding
+        )
+
+    video_timing_parameters.byte_range = [11,18]

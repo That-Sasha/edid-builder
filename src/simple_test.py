@@ -161,13 +161,20 @@ detailedTimingDescriptor = DetailedTimingDescriptor(
     sync = DetailedTimingDescriptor.DigitalSeparateSync()
 )
 
+monitor_range_limits = MonitorRangeLimits()
+
 
 base_edid = BaseEDID(
     header = header,
     basic_display_parameters = displayParameters,
     chromaticity_coordinates = chromaticityCoordinates,
     standard_timings = standardTiming,
-    descriptors = [detailedTimingDescriptor] *4
+    descriptors = [
+                    detailedTimingDescriptor,
+                    detailedTimingDescriptor,
+                    monitor_range_limits,
+                    detailedTimingDescriptor
+                   ]
 )
 
 simple_test(base_edid, expected, print_bad_bytes=False)

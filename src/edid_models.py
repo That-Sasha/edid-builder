@@ -353,7 +353,7 @@ class Header(ByteBlock):
     def manufacture_week(self, value):
         self._manufacture_week = value
 
-    manufacture_week.byte_range = [16,17]
+    manufacture_week.byte_range = 16
 
     # ===============================================================================================
 
@@ -369,7 +369,7 @@ class Header(ByteBlock):
     def manufacture_year(value):
         return (value - 1990).to_bytes()
 
-    manufacture_year.byte_range = [17,18]
+    manufacture_year.byte_range = 17
 
     # ===============================================================================================
 
@@ -416,7 +416,7 @@ class BasicDisplayParameters(ByteBlock):
     def video_params(value):
         return bytes.fromhex(value)
 
-    video_params.byte_range = [0,1]
+    video_params.byte_range = 0
 
     # ===============================================================================================
 
@@ -428,7 +428,7 @@ class BasicDisplayParameters(ByteBlock):
     def horizontal_size(self, value):
         self._horizontal_size = value
 
-    horizontal_size.byte_range = [1,2]
+    horizontal_size.byte_range = 1
 
     # ===============================================================================================
 
@@ -440,7 +440,7 @@ class BasicDisplayParameters(ByteBlock):
     def vertical_size(self, value):
         self._vertical_size = value
 
-    vertical_size.byte_range = [2,3]
+    vertical_size.byte_range = 2
 
     # ===============================================================================================
 
@@ -456,8 +456,7 @@ class BasicDisplayParameters(ByteBlock):
     def gamma(value):
         return int((value - 1) * 100).to_bytes()
 
-    gamma.byte_range = [3,4]
-
+    gamma.byte_range = 3
     # ===============================================================================================
 
     @EdidProperty
@@ -472,7 +471,7 @@ class BasicDisplayParameters(ByteBlock):
     def suported_features(value):
         return bytes.fromhex(value)
 
-    suported_features.byte_range = [4,5]
+    suported_features.byte_range = 4
 
 class ChromaticityCoordinates(ByteBlock):
 
@@ -508,7 +507,7 @@ class ChromaticityCoordinates(ByteBlock):
     def red_green_lsb(value):
         return bytes.fromhex(value)
 
-    red_green_lsb.byte_range = [0,1]
+    red_green_lsb.byte_range = 0
 
     # ===============================================================================================
 
@@ -524,7 +523,7 @@ class ChromaticityCoordinates(ByteBlock):
     def blue_white_lsb(value):
         return bytes.fromhex(value)
 
-    blue_white_lsb.byte_range = [1,2]
+    blue_white_lsb.byte_range = 1
 
     # ===============================================================================================
 
@@ -540,7 +539,7 @@ class ChromaticityCoordinates(ByteBlock):
     def red_x_msb(value):
         return bytes.fromhex(value)
 
-    red_x_msb.byte_range = [2,3]
+    red_x_msb.byte_range = 2
 
     # ===============================================================================================
 
@@ -556,7 +555,7 @@ class ChromaticityCoordinates(ByteBlock):
     def red_y_msb(value):
         return bytes.fromhex(value)
 
-    red_y_msb.byte_range = [3,4]
+    red_y_msb.byte_range = 3
 
     # ===============================================================================================
 
@@ -635,7 +634,7 @@ class StandardTiming(ByteBlock):
     def x_resolution(value):
         return (int(value / 8 - 31) & LSB8_BITMASK).to_bytes()
 
-    x_resolution.byte_range = [0,1]
+    x_resolution.byte_range = 0
 
     # ===============================================================================================
 
@@ -665,7 +664,7 @@ class StandardTiming(ByteBlock):
         return int(ar_lookup[aspect_ratio] + format(v_freq - 60, '06b'), 2).to_bytes()
 
 
-    vertical_timing.byte_range = [1,2]
+    vertical_timing.byte_range = 1
 
 class DetailedTimingDescriptor(ByteBlock):
     def __init__(
@@ -722,7 +721,7 @@ class DetailedTimingDescriptor(ByteBlock):
     def hor_pixels(value):
         return (value & LSB8_BITMASK).to_bytes()
 
-    hor_pixels.byte_range = [2,3]
+    hor_pixels.byte_range = 2
 
     # ===============================================================================================
 
@@ -738,7 +737,7 @@ class DetailedTimingDescriptor(ByteBlock):
     def hor_blnk_pixels(value):
         return (value & LSB8_BITMASK).to_bytes()
 
-    hor_blnk_pixels.byte_range = [3,4]
+    hor_blnk_pixels.byte_range = 3
 
     # ===============================================================================================
 
@@ -748,7 +747,7 @@ class DetailedTimingDescriptor(ByteBlock):
         # horizontal pixels are 12 bit numbers
         return int(format((self._hor_pixels >> 8) & 15, '04b')[:4] + format((self._hor_blnk_pixels >> 8) & 15, '04b')[:4],2)
 
-    hor_act_blank_msb.byte_range = [4,5]
+    hor_act_blank_msb.byte_range = 4
 
     # ===============================================================================================
 
@@ -764,7 +763,7 @@ class DetailedTimingDescriptor(ByteBlock):
     def vert_pixels(value):
         return (value & LSB8_BITMASK).to_bytes()
 
-    vert_pixels.byte_range = [5,6]
+    vert_pixels.byte_range = 5
 
     # ===============================================================================================
 
@@ -780,7 +779,7 @@ class DetailedTimingDescriptor(ByteBlock):
     def vert_blnk_pixels(value):
         return (value & LSB8_BITMASK).to_bytes()
 
-    vert_blnk_pixels.byte_range = [6,7]
+    vert_blnk_pixels.byte_range = 6
 
     # ===============================================================================================
 
@@ -790,7 +789,7 @@ class DetailedTimingDescriptor(ByteBlock):
         # horizontal pixels are 12 bit numbers
         return (((self._vert_pixels >> 8) & LSB4_BITMASK ) << 4 ) + ( (self._vert_blnk_pixels >> 8) & LSB4_BITMASK )
 
-    vert_act_blank_msb.byte_range = [7,8]
+    vert_act_blank_msb.byte_range = 7
 
     # ===============================================================================================
 
@@ -808,7 +807,7 @@ class DetailedTimingDescriptor(ByteBlock):
         # horizontal porch is a 10 bit number
         return (value & LSB8_BITMASK).to_bytes()
 
-    hor_front_porch.byte_range = [8,9]
+    hor_front_porch.byte_range = 8
 
     # ===============================================================================================
 
@@ -826,7 +825,7 @@ class DetailedTimingDescriptor(ByteBlock):
         # horizontal sync is a 10 bit number
         return (value & LSB8_BITMASK).to_bytes()
 
-    hor_synch_pulse.byte_range = [9,10]
+    hor_synch_pulse.byte_range = 9
 
     # ===============================================================================================
 
@@ -836,7 +835,7 @@ class DetailedTimingDescriptor(ByteBlock):
         # vertical sync and porch are 6 bit numbers
         return ((self._vert_front_porch & LSB4_BITMASK ) << 4 ) + ( self._vert_synch_pulse & LSB4_BITMASK )
 
-    vert_porch_sync_lsb.byte_range = [10,11]
+    vert_porch_sync_lsb.byte_range = 10
 
     # ===============================================================================================
 

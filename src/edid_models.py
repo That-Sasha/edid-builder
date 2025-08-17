@@ -981,7 +981,6 @@ class DetailedTimingDescriptor(ByteBlock):
 
     @EdidProperty
     def features(self):
-        print(self._sync.value)
         return (
             ( self._interlaced << 7 )
             + ( self._stereo.value << 5 )

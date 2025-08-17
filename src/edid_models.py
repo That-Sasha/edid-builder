@@ -182,7 +182,7 @@ class ByteBlock:
         return bytes_to_hex_block(self.as_bytes)
 
 class BaseEDID(ByteBlock):
-    def __init__(self, header, basic_display_parameters, chromaticity_coordinates, standard_timings, descriptors, established_timing='000000'):
+    def __init__(self, header, basic_display_parameters, chromaticity_coordinates, standard_timings, descriptors, num_ext_blocks, established_timing='000000'):
         if not isinstance(standard_timings, list):
             standard_timings = [standard_timings]
 
@@ -197,7 +197,11 @@ class BaseEDID(ByteBlock):
         self._established_timing = established_timing
         self._standard_timings = standard_timings
         self._descriptors = descriptors
+        self._num_ext_blocks = num_ext_blocks
 
+        self._checksum = 0
+        edid_sum = sum(self.as_bytes)
+        self._checksum = 256 - edid_sum % 256
 
 
     @EdidProperty
@@ -299,6 +303,27 @@ class BaseEDID(ByteBlock):
         return reduce(lambda x, y: x + y, [descriptor.as_bytes for descriptor in value])
 
     descriptors.byte_range = [54,126]
+
+    # ===============================================================================================
+
+    @EdidProperty
+    def num_ext_blocks(self):
+        return self._num_ext_blocks
+
+    @num_ext_blocks.setter
+    def num_ext_blocks(self, value):
+        self._num_ext_blocks = value
+
+    num_ext_blocks.byte_range = 126
+
+    # ===============================================================================================
+
+    @EdidProperty
+    def checksum(self):
+        return self._checksum
+
+    checksum.byte_range = 127
+
 
 class Header(ByteBlock):
 
@@ -1040,6 +1065,68 @@ class MonitorDescriptor(ByteBlock):
         return 0
 
     monitor_descriptor_header.byte_range = [0,3]
+
+class MonitorText(MonitorDescriptor):
+
+    def __init__(self, text, type=MonitorDescriptor.DescriptorType.TEXT):
+        assert len(text) < 13, 'Text must be less than 13 bytes/characters'
+
+        self._text = text
+        self._type = type
+
+
+    @EdidProperty
+    def type(self):
+        return self._type
+
+    @type.byte_converter
+    def type(value):
+        return value.value.to_bytes()
+
+    type.byte_range = 3
+
+    # ===============================================================================================
+
+    @EdidProperty
+    def reserved(self):
+        return 0
+
+    reserved.byte_range = 4
+
+    # ===============================================================================================
+
+    @EdidProperty
+    def text(self):
+        return self._text
+
+    @text.setter
+    def text(self, value):
+        self._text = value
+
+    @text.byte_converter
+    def text(value):
+        byte_val = value.encode('ascii')
+
+        length = len(byte_val)
+        padding = (0x20).to_bytes() * ( 12 - length )
+
+        return (
+            byte_val
+            + 0x0A.to_bytes()
+            + padding
+        )
+
+    text.byte_range = [5,18]
+
+class MonitorName(MonitorText):
+
+    def __init__(self, name):
+        super().__init__(name, type=MonitorDescriptor.DescriptorType.MONITOR_NAME)
+
+class MonitorSerialNumber(MonitorText):
+
+    def __init__(self, serial_num):
+        super().__init__(serial_num, type=MonitorDescriptor.DescriptorType.MONITOR_SERIAL_NUMBER)
 
 class MonitorRangeLimits(MonitorDescriptor):
 

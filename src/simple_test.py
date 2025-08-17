@@ -161,8 +161,11 @@ detailedTimingDescriptor = DetailedTimingDescriptor(
     sync = DetailedTimingDescriptor.DigitalSeparateSync()
 )
 
+serial_number = MonitorSerialNumber('Linux #0')
+
 monitor_range_limits = MonitorRangeLimits()
 
+edid_name = MonitorName('3840x2160')
 
 base_edid = BaseEDID(
     header = header,
@@ -171,10 +174,11 @@ base_edid = BaseEDID(
     standard_timings = standardTiming,
     descriptors = [
                     detailedTimingDescriptor,
-                    detailedTimingDescriptor,
+                    serial_number,
                     monitor_range_limits,
-                    detailedTimingDescriptor
-                   ]
+                    edid_name
+                   ],
+    num_ext_blocks = 0
 )
 
 simple_test(base_edid, expected, print_bad_bytes=False)

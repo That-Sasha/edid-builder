@@ -31,6 +31,8 @@ class EdidPropertyValue:
     def block_size(self):
         if isinstance(self.value, list):
             size = (self.byte_range[1] - self.byte_range[0]) / len(self.value)
+        elif isinstance(self.value, ByteBlock):
+            return self.value.block_size
         else:
             size = self.byte_range[1] - self.byte_range[0]
 
@@ -79,9 +81,12 @@ class EdidProperty:
 
 class ByteBlock:
 
+    def get_edid_props(self) -> list[EdidPropertyValue]:
+        return [getattr(self,a) for a in self.edid_prop_names]
+
     def data_at_position(self, position):
         # returns the data that contains the specified byte
-        properties = [a for a in dir(self) if 'EdidPropertyValue' in str(type(getattr(self, a)))]
+        properties = self.edid_prop_names
 
         for prop in properties:
             byte_range = getattr(self, prop).byte_range
@@ -119,7 +124,7 @@ class ByteBlock:
         members = dir(self)
         members.remove('as_bytes')
 
-        properties = [getattr(self,a) for a in members if 'EdidPropertyValue' in str(type(getattr(self, a)))]
+        properties = self.get_edid_props()
         sorted_properties = sorted(properties, key=lambda prop: (prop.byte_range[0]))
         sorted_prop_lengths = [prop.block_size for prop in sorted_properties]
 
@@ -136,14 +141,42 @@ class ByteBlock:
                     prop_bytes = prop_bytes + item.as_bytes + bytes(length - len(item.as_bytes))
 
             elif len(prop.as_bytes) > length:
-                raise Exception(f'returned more bytes than size of byte range for {prop.value.__class__.__name__}')
+                raise Exception(
+                    f'returned more bytes than size of byte range for {prop.value.__class__.__name__}\n'
+                    + f'byte range expected: {length} bytes\n'
+                    + f'but recieved {len(prop.as_bytes)} bytes'
+                                )
 
             else:
                 prop_bytes = prop.as_bytes + bytes(length - len(prop.as_bytes))
 
             bytes_list.append(prop_bytes)
 
-        return reduce(lambda x, y: x + y, bytes_list)
+        if len(bytes_list) > 0:
+            return reduce(lambda x, y: x + y, bytes_list)
+        else:
+            pass
+
+    @property
+    def block_size(self):
+        properties = self.get_edid_props()
+        total_block_size = 0
+
+        for prop in properties:
+            total_block_size += prop.block_size
+
+        return total_block_size
+
+    @property
+    def edid_prop_names(self) -> list[str]:
+        edid_props = []
+
+        for cls in [self] + self.__class__.mro():
+            for attr, attr_type in cls.__dict__.items():
+                if 'EdidProperty' in str(attr_type):
+                    edid_props.append(attr)
+
+        return edid_props
 
     def __str__(self):
         return bytes_to_hex_block(self.as_bytes)
@@ -263,7 +296,6 @@ class BaseEDID(ByteBlock):
 
     @descriptors.byte_converter
     def descriptors(value):
-
         return reduce(lambda x, y: x + y, [descriptor.as_bytes for descriptor in value])
 
     descriptors.byte_range = [54,126]

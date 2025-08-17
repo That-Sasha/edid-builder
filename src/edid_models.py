@@ -1,6 +1,7 @@
 import re
 import string
 
+from enum import Enum
 from functools import reduce
 from math import floor
 from textwrap import wrap
@@ -667,6 +668,62 @@ class StandardTiming(ByteBlock):
     vertical_timing.byte_range = 1
 
 class DetailedTimingDescriptor(ByteBlock):
+
+    class StereoMode(Enum):
+        NONE=0
+        RIGHT_SYNC=1
+        LEFT_SYNC=2
+        INTERLEAVED_RIGHT=3
+        INTERLEAVED_LEFT=4
+        INTERLEAVED_FOUR_WAY=5
+        INTERLEAVED_SBS=6
+
+    @staticmethod
+    class AnalogueSync():
+
+        def __init__(self, serration=False, bipolar=False, sync_on_rgb=False):
+            self._serration = int(serration)
+            self._sync_type = int(self._bipolar)
+            self._sync_on_rgb = int(sync_on_rgb)
+
+        @property
+        def value(self):
+            return (
+                ( self._sync_type << 3 )
+                + ( self._serration << 1 )
+                + ( self._sync_on_rgb )
+            )
+
+    @staticmethod
+    class DigitalSync():
+
+        def __init__(self, serration=False, positive_sync_polarity=False):
+            self._serration = int(serration)
+            self._sync_polarity = int(positive_sync_polarity)
+
+        @property
+        def value(self):
+            return (
+                ( 2 << 3 )
+                + ( self._serration << 1 )
+                + ( self._positive_sync_polarity )
+            )
+
+    @staticmethod
+    class DigitalSeparateSync():
+
+        def __init__(self, positive_vert_sync_polarity=True, positive_hor_sync_polarity=True):
+            self._positive_vert_sync_polarity = int(positive_vert_sync_polarity)
+            self._positive_hor_sync_polarity = int(positive_hor_sync_polarity)
+
+        @property
+        def value(self):
+            return (
+                ( 3 << 3 )
+                + ( self._positive_vert_sync_polarity << 2 )
+                + ( self._positive_hor_sync_polarity << 1 )
+            )
+
     def __init__(
             self,
             pixel_clock=594,
@@ -677,7 +734,14 @@ class DetailedTimingDescriptor(ByteBlock):
             hor_front_porch=176,
             hor_synch_pulse=88,
             vert_front_porch=8,
-            vert_synch_pulse=10
+            vert_synch_pulse=10,
+            hor_size_mm=1000,
+            vert_size_mm=562,
+            hor_border_pixels=0,
+            vert_border_pixels=0,
+            interlaced=False,
+            stereo=StereoMode.NONE,
+            sync=DigitalSeparateSync()
         ):
 
         assert 0.01 <= pixel_clock <= 655.35, 'Pixel clock must be between 0.01 - 655.35 MHz'
@@ -691,6 +755,13 @@ class DetailedTimingDescriptor(ByteBlock):
         self._hor_synch_pulse = hor_synch_pulse
         self._vert_front_porch = vert_front_porch
         self._vert_synch_pulse = vert_synch_pulse
+        self._hor_size_mm = hor_size_mm
+        self._vert_size_mm = vert_size_mm
+        self._hor_border_pixels = hor_border_pixels
+        self._vert_border_pixels = vert_border_pixels
+        self._interlaced = interlaced
+        self._stereo = stereo
+        self._sync = sync
 
 
     @EdidProperty
@@ -848,7 +919,57 @@ class DetailedTimingDescriptor(ByteBlock):
                     + (( self._vert_synch_pulse & ~LSB4_BITMASK ) >> 4 )
                 )
 
-    porch_sync_msb.byte_range = [11,12]
+    porch_sync_msb.byte_range = 11
 
     # ===============================================================================================
 
+    @EdidProperty
+    def hor_size_mm(self):
+        return self._hor_size_mm & LSB8_BITMASK
+
+    hor_size_mm.byte_range = 12
+
+    # ===============================================================================================
+
+    @EdidProperty
+    def vert_size_mm(self):
+        return self._vert_size_mm & LSB8_BITMASK
+
+    vert_size_mm.byte_range = 13
+
+    # ===============================================================================================
+
+    @EdidProperty
+    def image_size_msb(self):
+        return (((self._hor_size_mm >> 8) & LSB4_BITMASK ) << 4 ) + ( (self._vert_size_mm >> 8) & LSB4_BITMASK )
+
+    image_size_msb.byte_range = 14
+
+    # ===============================================================================================
+
+    @EdidProperty
+    def hor_border_pixels(self):
+        return self._hor_border_pixels
+
+    hor_border_pixels.byte_range = 15
+
+    # ===============================================================================================
+
+    @EdidProperty
+    def vert_border_pixels(self):
+        return self._vert_border_pixels
+
+    vert_border_pixels.byte_range = 16
+
+    # ===============================================================================================
+
+    @EdidProperty
+    def features(self):
+        print(self._sync.value)
+        return (
+            ( self._interlaced << 7 )
+            + ( self._stereo.value << 5 )
+            + self._sync.value
+        )
+
+    features.byte_range = 17

@@ -145,7 +145,20 @@ standardTiming = StandardTiming(
 detailedTimingDescriptor = DetailedTimingDescriptor(
     pixel_clock = 594,
     hor_pixels = 3840,
-    hor_blnk_pixels = 560
+    hor_blnk_pixels = 560,
+    vert_pixels = 2160,
+    vert_blnk_pixels = 90,
+    hor_front_porch = 176,
+    hor_synch_pulse = 88,
+    vert_front_porch = 8,
+    vert_synch_pulse = 10,
+    hor_size_mm = 1000,
+    vert_size_mm = 562,
+    hor_border_pixels = 0,
+    vert_border_pixels = 0,
+    interlaced = False,
+    stereo = DetailedTimingDescriptor.StereoMode.NONE,
+    sync = DetailedTimingDescriptor.DigitalSeparateSync()
 )
 
 

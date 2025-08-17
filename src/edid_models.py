@@ -1037,7 +1037,6 @@ class MonitorDescriptor(ByteBlock):
 
     @EdidProperty
     def monitor_descriptor_header(self):
-        print(self.edid_prop_names)
         return 0
 
     monitor_descriptor_header.byte_range = [0,3]

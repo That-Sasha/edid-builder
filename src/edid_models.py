@@ -21,14 +21,17 @@ class EdidPropertyValue:
 
     @property
     def byte_range(self):
-        return self._byte_range
+        if isinstance(self._byte_range, list):
+            return self._byte_range
+        else:
+            return [self._byte_range, self._byte_range + 1]
 
     @property
     def block_size(self):
         if isinstance(self.value, list):
-            size = (self._byte_range[1] - self._byte_range[0]) / len(self.value)
+            size = (self.byte_range[1] - self.byte_range[0]) / len(self.value)
         else:
-            size = self._byte_range[1] - self._byte_range[0]
+            size = self.byte_range[1] - self.byte_range[0]
 
         assert (size % 1) == 0, f'Non integer block size found for {self.value.__class__.__name__}'
 

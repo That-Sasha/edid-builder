@@ -5,6 +5,7 @@ from enum import Enum
 from functools import reduce
 from math import floor
 from textwrap import wrap
+from warnings import warn
 
 LSB8_BITMASK = int('0xFF',0)
 LSB4_BITMASK = int('0x0F',0)
@@ -324,7 +325,6 @@ class BaseEDID(ByteBlock):
 
     checksum.byte_range = 127
 
-
 class Header(ByteBlock):
 
     def __init__(self, manufacturer_id='YTS', product_code='B106', serial_num=0, manufacture_week=0, manufacture_year=2025, edid_version='1.4'):
@@ -447,9 +447,93 @@ class Header(ByteBlock):
 
 class BasicDisplayParameters(ByteBlock):
 
-    def __init__(self, video_params='B5', horizontal_size=100, vertical_size=56, gamma=2.2, suported_features='FF'):
+    class DigitalParameters(ByteBlock):
 
-        assert all(c in string.hexdigits for c in video_params), 'Video parameters must be a 2 digit hexadecimal string'
+        class BitDepth(Enum):
+            UNDEFINED=0
+            BD_6=1
+            BD_8=2
+            BD_10=3
+            BD_12=4
+            BD_14=5
+            BD_16=6
+
+        class Interface(Enum):
+            UNDEFINED=0
+            DVI=1
+            HDMIa=2
+            HDMIb=3
+            MDDI=4
+            DISPLAY_PORT=5
+
+        def __init__(self, bit_depth, interface):
+            self._bit_depth = bit_depth
+            self._interface = interface
+
+        @EdidProperty
+        def parameters_bitmap(self):
+            return (
+                (1 << 7)
+                + (self._bit_depth.value << 4)
+                + self._interface.value
+            )
+
+        parameters_bitmap.byte_range = 0
+
+    class AnalogueParameters(ByteBlock):
+
+        class WhiteAndSyncLevels(Enum):
+            w07s03=0
+            w0714s0286=1
+            w1s04=2
+            w07s0=3
+
+        def __init__(
+                self,
+                white_sync_lvls : WhiteAndSyncLevels,
+                BTB : bool,
+                separate_sync_support : bool,
+                composite_sync_support : bool,
+                sync_on_green : bool,
+                serration_on_vsync_pulse : bool
+                ):
+
+            self._white_sync_lvls = white_sync_lvls
+            self._BTB = BTB
+            self._separate_sync_support = separate_sync_support
+            self._composite_sync_support = composite_sync_support
+            self._sync_on_green = sync_on_green
+            self._serration_on_vsync_pulse = serration_on_vsync_pulse
+
+            if (composite_sync_support or sync_on_green) and not serration_on_vsync_pulse:
+                warn('Serration on vsync pulse must be true when using composite sync or sync on green, forcing true...')
+                self._serration_on_vsync_pulse = True
+
+        @EdidProperty
+        def parameters_bitmap(self):
+            return (
+                + (self._white_sync_lvls.value << 5)
+                + (int(self._BTB) << 4)
+                + (int(self._separate_sync_support) << 3)
+                + (int(self._composite_sync_support) << 2)
+                + (int(self._sync_on_green) << 1)
+                + int(self._serration_on_vsync_pulse)
+            )
+
+        parameters_bitmap.byte_range = 0
+
+    def __init__(
+            self,
+            video_params=DigitalParameters(
+                bit_depth=DigitalParameters.BitDepth.BD_10,
+                interface=DigitalParameters.Interface.DISPLAY_PORT
+            ),
+            horizontal_size=100,
+            vertical_size=56,
+            gamma=2.2,
+            suported_features='FF'
+            ):
+
         assert 1 <= horizontal_size <= 255, 'Horizontal size must be an integer 1 - 255'
         assert 1 <= vertical_size <= 255, 'Vertical size must be an integer 1 - 255'
         assert 1.00 <= gamma <= 3.54, 'Gamma must be an integer 1.00 - 3.54'
@@ -472,7 +556,7 @@ class BasicDisplayParameters(ByteBlock):
 
     @video_params.byte_converter
     def video_params(value):
-        return bytes.fromhex(value)
+        return value.as_bytes
 
     video_params.byte_range = 0
 

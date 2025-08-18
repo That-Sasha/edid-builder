@@ -119,7 +119,14 @@ header = Header(
 )
 
 displayParameters = BasicDisplayParameters(
-    video_params='6D',
+    video_params=BasicDisplayParameters.AnalogueParameters(
+                white_sync_lvls=BasicDisplayParameters.AnalogueParameters.WhiteAndSyncLevels.w07s0,
+                BTB=False,
+                separate_sync_support=True,
+                composite_sync_support=True,
+                sync_on_green=False,
+                serration_on_vsync_pulse=True
+            ),
     horizontal_size=100,
     vertical_size=56,
     gamma=2.2,

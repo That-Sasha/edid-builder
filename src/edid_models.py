@@ -72,14 +72,11 @@ class EdidProperty:
     def byte_converter(self, converter):
         return type(self)(self._getter, self._setter, self._byte_range, converter)
 
-    # This is hacky and I don't like it, but it works
-    @property
-    def byte_range():
-        pass
-
-    @byte_range.setter
-    def byte_range(self, value):
+    # byte range getter is defined in EdidPropertyValue because apparently that's just what it takes 🙄
+    def _byte_range_setter(self, value):
         self._byte_range = value
+
+    byte_range = property(fset=_byte_range_setter)
 
 class ByteBlock:
 

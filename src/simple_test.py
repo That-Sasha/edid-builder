@@ -94,7 +94,7 @@ def simple_test(test_class, expected, print_bad_bytes=True, print_expected=False
                 for param in all_params[1:]:
                     byte_range = range(int(param.split(' ')[0]), int(param.split(' ')[2]) + 1)
                     if print_expected:
-                        param = param + f'{expected[byte_range.start*3:byte_range.stop*3]}'
+                        param = param + f'{expected[byte_range.start*3:byte_range.stop*3]}'.strip()
                     if bad_byte in byte_range and param not in error_string:
                         error_string.append(param)
         error_string = '\n'.join(error_string)
@@ -188,8 +188,7 @@ base_edid = BaseEDID(
                     serial_number,
                     monitor_range_limits,
                     edid_name
-                   ],
-    num_ext_blocks = 0
+                   ]
 )
 
 if __name__ == "__main__":

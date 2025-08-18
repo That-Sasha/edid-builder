@@ -5,16 +5,18 @@ from enum import Enum
 from functools import reduce
 from math import floor
 from textwrap import wrap
+from typing import List
 from warnings import warn
 
 LSB8_BITMASK = 0xFF
 LSB4_BITMASK = 0x0F
 LSB2_BITMASK = 0x03
 
-def bytes_to_hex_block(byte_array, width=16):
+def bytes_to_hex_block(byte_array, width=16, height=8):
 
     hex_str = ' '.join(format(byte, '02x') for byte in byte_array)
-    return '\n'.join(wrap(hex_str, width=width * 3)).upper()
+    blocks = wrap(hex_str, width=width * height * 3)
+    return '\n\n'.join(['\n'.join(wrap(block, width=width * 3)) for block in blocks]).upper()
 
 class EdidPropertyValue:
     def __init__(self, value, byte_val, byte_range):
@@ -32,7 +34,10 @@ class EdidPropertyValue:
     @property
     def block_size(self):
         if isinstance(self.value, list):
-            size = (self.byte_range[1] - self.byte_range[0]) / len(self.value)
+            if len(self.value) > 0:
+                size = (self.byte_range[1] - self.byte_range[0]) / len(self.value)
+            else:
+                size = 0
         elif isinstance(self.value, ByteBlock):
             return self.value.block_size
         else:
@@ -136,14 +141,17 @@ class ByteBlock:
             if isinstance(prop.value, list):
                 for idx, item in enumerate(prop.value):
                     if len(item.as_bytes) > length:
-                        raise Exception(f'returned more bytes than size of byte range for {item.__class__.__name__}{idx}')
+                        raise Exception(f'returned more bytes than size of byte range for {item.__class__.__name__}{idx}\n'
+                                    + f'byte range expected: {length} bytes\n'
+                                    + f'but recieved {len(prop.as_bytes)} bytes'
+                                )
                     prop_bytes = prop_bytes + item.as_bytes + bytes(length - len(item.as_bytes))
 
             elif len(prop.as_bytes) > length:
                 raise Exception(
                     f'returned more bytes than size of byte range for {prop.value.__class__.__name__}\n'
-                    + f'byte range expected: {length} bytes\n'
-                    + f'but recieved {len(prop.as_bytes)} bytes'
+                                    + f'byte range expected: {length} bytes\n'
+                                    + f'but recieved {len(prop.as_bytes)} bytes'
                                 )
 
             else:
@@ -162,7 +170,10 @@ class ByteBlock:
         total_block_size = 0
 
         for prop in properties:
-            total_block_size += prop.block_size
+            if isinstance(prop.value, list):
+                total_block_size += prop.block_size * len(prop.value)
+            else:
+                total_block_size += prop.block_size
 
         return total_block_size
 
@@ -181,7 +192,16 @@ class ByteBlock:
         return bytes_to_hex_block(self.as_bytes)
 
 class BaseEDID(ByteBlock):
-    def __init__(self, header, basic_display_parameters, chromaticity_coordinates, standard_timings, descriptors, num_ext_blocks, established_timing='000000'):
+    def __init__(
+            self,
+            header,
+            basic_display_parameters,
+            chromaticity_coordinates,
+            standard_timings,
+            descriptors,
+            extension_blocks=[],
+            established_timing='000000'
+            ):
         if not isinstance(standard_timings, list):
             standard_timings = [standard_timings]
 
@@ -196,10 +216,16 @@ class BaseEDID(ByteBlock):
         self._established_timing = established_timing
         self._standard_timings = standard_timings
         self._descriptors = descriptors
-        self._num_ext_blocks = num_ext_blocks
+
+        self._extension_blocks = extension_blocks
+        self.extension_blocks.byte_range[1] += 128 * len(extension_blocks)
 
         self._checksum = 0
-        edid_sum = sum(self.as_bytes)
+        if self.extension_blocks.block_size > 0:
+            edid_sum = sum(self.as_bytes) - sum(self.extension_blocks.as_bytes)
+        else:
+            edid_sum = sum(self.as_bytes)
+
         self._checksum = (256 - edid_sum % 256) % 256
 
 
@@ -307,11 +333,7 @@ class BaseEDID(ByteBlock):
 
     @EdidProperty
     def num_ext_blocks(self):
-        return self._num_ext_blocks
-
-    @num_ext_blocks.setter
-    def num_ext_blocks(self, value):
-        self._num_ext_blocks = value
+        return len(self.extension_blocks.value)
 
     num_ext_blocks.byte_range = 126
 
@@ -322,6 +344,25 @@ class BaseEDID(ByteBlock):
         return self._checksum
 
     checksum.byte_range = 127
+
+    # ===============================================================================================
+
+    @EdidProperty
+    def extension_blocks(self):
+        return self._extension_blocks
+
+    @extension_blocks.setter
+    def extension_blocks(self, value):
+        self._extension_blocks = value
+
+    @extension_blocks.byte_converter
+    def extension_blocks(value : List[ByteBlock]):
+        if len(value) > 0:
+            return reduce(lambda x, y: x + y, [block.as_bytes for block in value])
+        else:
+            pass
+
+    extension_blocks.byte_range = [128,128] # minimum size
 
 class Header(ByteBlock):
 

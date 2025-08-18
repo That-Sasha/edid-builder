@@ -1384,10 +1384,6 @@ class MonitorRangeLimits(MonitorDescriptor):
 
     def __init__(
             self,
-            hor_offset_max=0,
-            hor_offset_min=0,
-            vert_offset_max=0,
-            vert_offset_min=0,
             vert_freq_min=59,
             vert_freq_max=61,
             hor_freq_min=134,
@@ -1396,10 +1392,12 @@ class MonitorRangeLimits(MonitorDescriptor):
             extended_timing_info_type=ExtendedTimingInfoType.DEFAULT_GTF,
             video_timing_parameters=None
             ):
-        self._hor_offset_max = hor_offset_max
-        self._hor_offset_min = hor_offset_min
-        self._vert_offset_max = vert_offset_max
-        self._vert_offset_min = vert_offset_min
+
+        assert vert_freq_min <= 510, 'Vertical frequency minimum be an integer <= 510'
+        assert vert_freq_max <= 510, 'Vertical frequency maximum must be an integer <= 510'
+        assert hor_freq_min <= 510, 'Horizontal frequency minimum must be an integer <= 510'
+        assert hor_freq_max <= 510, 'Horizontal frequency maximum must be an integer <= 510'
+
         self._vert_freq_min = vert_freq_min
         self._vert_freq_max = vert_freq_max
         self._hor_freq_min = hor_freq_min
@@ -1422,11 +1420,15 @@ class MonitorRangeLimits(MonitorDescriptor):
 
     @EdidProperty
     def range_limit_offsets(self):
+        h_max = 1 if self._hor_freq_max > 255 else 0
+        h_min = 1 if self._hor_freq_min > 255 else 0
+        v_max = 1 if self._vert_freq_max > 255 else 0
+        v_min = 1 if self._vert_freq_min > 255 else 0
         return (
-            self._hor_offset_max << 3
-            + self._hor_offset_min << 2
-            + self._vert_offset_max << 1
-            + self._vert_offset_min
+            ( h_max << 3 )
+            + ( h_min << 2 )
+            + ( v_max << 1 )
+            + v_min
         )
 
     range_limit_offsets.byte_range = 4
@@ -1435,7 +1437,10 @@ class MonitorRangeLimits(MonitorDescriptor):
 
     @EdidProperty
     def vert_freq_min(self):
-        return self._vert_freq_min
+        if self._vert_freq_min > 255:
+            return self._vert_freq_min - 255
+        else:
+            return self._vert_freq_min
 
     @vert_freq_min.setter
     def vert_freq_min(self, value):
@@ -1447,7 +1452,10 @@ class MonitorRangeLimits(MonitorDescriptor):
 
     @EdidProperty
     def vert_freq_max(self):
-        return self._vert_freq_max
+        if self._vert_freq_max > 255:
+            return self._vert_freq_max - 255
+        else:
+            return self._vert_freq_max
 
     @vert_freq_max.setter
     def vert_freq_max(self, value):
@@ -1459,7 +1467,10 @@ class MonitorRangeLimits(MonitorDescriptor):
 
     @EdidProperty
     def hor_freq_min(self):
-        return self._hor_freq_min
+        if self._hor_freq_min > 255:
+            return self._hor_freq_min - 255
+        else:
+            return self._hor_freq_min
 
     @hor_freq_min.setter
     def hor_freq_min(self, value):
@@ -1471,7 +1482,10 @@ class MonitorRangeLimits(MonitorDescriptor):
 
     @EdidProperty
     def hor_freq_max(self):
-        return self._hor_freq_max
+        if self._hor_freq_max > 255:
+            return self._hor_freq_max - 255
+        else:
+            return self._hor_freq_max
 
     @hor_freq_max.setter
     def hor_freq_max(self, value):

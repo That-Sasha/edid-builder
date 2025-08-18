@@ -1032,6 +1032,96 @@ class DetailedTimingDescriptor(ByteBlock):
         self._stereo = stereo
         self._sync = sync
 
+    # ===============================================================================================
+
+    # Input Properties
+
+    # ===============================================================================================
+
+    @property
+    def hor_pixels(self):
+        return self._hor_pixels
+
+    @hor_pixels.setter
+    def hor_pixels(self, value):
+        self._hor_pixels = value
+
+    # ===============================================================================================
+
+    @property
+    def hor_blnk_pixels(self):
+        return self._hor_blnk_pixels
+
+    @hor_blnk_pixels.setter
+    def hor_blnk_pixels(self, value):
+        self._hor_blnk_pixels = value
+
+    # ===============================================================================================
+
+    @property
+    def vert_pixels(self):
+        return self._vert_pixels
+
+    @vert_pixels.setter
+    def vert_pixels(self, value):
+        self._vert_pixels = value
+
+    # ===============================================================================================
+
+    @property
+    def vert_blnk_pixels(self):
+        return self._vert_blnk_pixels
+
+    @vert_blnk_pixels.setter
+    def vert_blnk_pixels(self, value):
+        self._vert_blnk_pixels = value
+
+    # ===============================================================================================
+
+    @property
+    def hor_front_porch(self):
+        return self._hor_front_porch
+
+    @hor_front_porch.setter
+    def hor_front_porch(self, value):
+        self._hor_front_porch = value
+
+    # ===============================================================================================
+
+    @property
+    def hor_synch_pulse(self):
+        return self._hor_synch_pulse
+
+    @hor_synch_pulse.setter
+    def hor_synch_pulse(self, value):
+        self._hor_synch_pulse = value
+
+    # ===============================================================================================
+
+    @property
+    def hor_size_mm(self):
+        return self._hor_size_mm
+
+    @hor_size_mm.setter
+    def hor_size_mm(self, value):
+        self._hor_size_mm = value
+
+    # ===============================================================================================
+
+    @property
+    def vert_size_mm(self):
+        return self._vert_size_mm
+
+    @vert_size_mm.setter
+    def vert_size_mm(self, value):
+        self._vert_size_mm = value
+
+    # ===============================================================================================
+
+    # EDID Properties
+
+    # ===============================================================================================
+
 
     @EdidProperty
     def pixel_clock(self):
@@ -1050,34 +1140,18 @@ class DetailedTimingDescriptor(ByteBlock):
     # ===============================================================================================
 
     @EdidProperty
-    def hor_pixels(self):
-        return self._hor_pixels
+    def hor_pixels_lsb(self):
+        return (self._hor_pixels & LSB8_BITMASK)
 
-    @hor_pixels.setter
-    def hor_pixels(self, value):
-        self._hor_pixels = value
-
-    @hor_pixels.byte_converter
-    def hor_pixels(value):
-        return (value & LSB8_BITMASK).to_bytes()
-
-    hor_pixels.byte_range = 2
+    hor_pixels_lsb.byte_range = 2
 
     # ===============================================================================================
 
     @EdidProperty
-    def hor_blnk_pixels(self):
-        return self._hor_blnk_pixels
+    def hor_blnk_pixels_lsb(self):
+        return (self._hor_blnk_pixels & LSB8_BITMASK)
 
-    @hor_blnk_pixels.setter
-    def hor_blnk_pixels(self, value):
-        self._hor_blnk_pixels = value
-
-    @hor_blnk_pixels.byte_converter
-    def hor_blnk_pixels(value):
-        return (value & LSB8_BITMASK).to_bytes()
-
-    hor_blnk_pixels.byte_range = 3
+    hor_blnk_pixels_lsb.byte_range = 3
 
     # ===============================================================================================
 
@@ -1092,34 +1166,18 @@ class DetailedTimingDescriptor(ByteBlock):
     # ===============================================================================================
 
     @EdidProperty
-    def vert_pixels(self):
-        return self._vert_pixels
+    def vert_pixels_lsb(self):
+        return (self._vert_pixels & LSB8_BITMASK)
 
-    @vert_pixels.setter
-    def vert_pixels(self, value):
-        self._vert_pixels = value
-
-    @vert_pixels.byte_converter
-    def vert_pixels(value):
-        return (value & LSB8_BITMASK).to_bytes()
-
-    vert_pixels.byte_range = 5
+    vert_pixels_lsb.byte_range = 5
 
     # ===============================================================================================
 
     @EdidProperty
-    def vert_blnk_pixels(self):
-        return self._vert_blnk_pixels
+    def vert_blnk_pixels_lsb(self):
+        return (self._vert_blnk_pixels & LSB8_BITMASK)
 
-    @vert_blnk_pixels.setter
-    def vert_blnk_pixels(self, value):
-        self._vert_blnk_pixels = value
-
-    @vert_blnk_pixels.byte_converter
-    def vert_blnk_pixels(value):
-        return (value & LSB8_BITMASK).to_bytes()
-
-    vert_blnk_pixels.byte_range = 6
+    vert_blnk_pixels_lsb.byte_range = 6
 
     # ===============================================================================================
 
@@ -1134,38 +1192,22 @@ class DetailedTimingDescriptor(ByteBlock):
     # ===============================================================================================
 
     @EdidProperty
-    def hor_front_porch(self):
-        return self._hor_front_porch
-
-    @hor_front_porch.setter
-    def hor_front_porch(self, value):
-        self._hor_front_porch = value
-
-    @hor_front_porch.byte_converter
-    def hor_front_porch(value):
+    def hor_front_porch_lsb(self):
         # https://glenwing.github.io/docs/VESA-EEDID-A2.pdf#page=33
         # horizontal porch is a 10 bit number
-        return (value & LSB8_BITMASK).to_bytes()
+        return (self._hor_front_porch & LSB8_BITMASK)
 
-    hor_front_porch.byte_range = 8
+    hor_front_porch_lsb.byte_range = 8
 
     # ===============================================================================================
 
     @EdidProperty
-    def hor_synch_pulse(self):
-        return self._hor_synch_pulse
-
-    @hor_synch_pulse.setter
-    def hor_synch_pulse(self, value):
-        self._hor_synch_pulse = value
-
-    @hor_synch_pulse.byte_converter
-    def hor_synch_pulse(value):
+    def hor_synch_pulse_lsb(self):
         # https://glenwing.github.io/docs/VESA-EEDID-A2.pdf#page=33
         # horizontal sync is a 10 bit number
-        return (value & LSB8_BITMASK).to_bytes()
+        return (self._hor_synch_pulse & LSB8_BITMASK)
 
-    hor_synch_pulse.byte_range = 9
+    hor_synch_pulse_lsb.byte_range = 9
 
     # ===============================================================================================
 
@@ -1193,26 +1235,18 @@ class DetailedTimingDescriptor(ByteBlock):
     # ===============================================================================================
 
     @EdidProperty
-    def hor_size_mm(self):
+    def hor_size_mm_lsb(self):
         return self._hor_size_mm & LSB8_BITMASK
 
-    @hor_size_mm.setter
-    def hor_size_mm(self, value):
-        self._hor_size_mm = value
-
-    hor_size_mm.byte_range = 12
+    hor_size_mm_lsb.byte_range = 12
 
     # ===============================================================================================
 
     @EdidProperty
-    def vert_size_mm(self):
+    def vert_size_mm_lsb(self):
         return self._vert_size_mm & LSB8_BITMASK
 
-    @vert_size_mm.setter
-    def vert_size_mm(self, value):
-        self._vert_size_mm = value
-
-    vert_size_mm.byte_range = 13
+    vert_size_mm_lsb.byte_range = 13
 
     # ===============================================================================================
 

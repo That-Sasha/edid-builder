@@ -43,9 +43,9 @@ class EdidPropertyValue:
 
 class EdidProperty:
 
-    def __init__(self, getter, setter=None, byte_range=None, byte_converter = lambda x: x.to_bytes()):
-        self._getter = getter
-        self._setter = setter
+    def __init__(self, fget=None, fset=None, byte_range=None, byte_converter = lambda x: x.to_bytes()):
+        self._getter = fget
+        self._setter = fset
         self._byte_range = byte_range
         self._byte_converter = byte_converter
 

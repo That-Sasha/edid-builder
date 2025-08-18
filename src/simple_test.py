@@ -93,11 +93,10 @@ def simple_test(test_class, expected, print_bad_bytes=True, print_expected=False
             for bad_byte in bad_bytes:
                 for param in all_params[1:]:
                     byte_range = range(int(param.split(' ')[0]), int(param.split(' ')[2]) + 1)
+                    if print_expected:
+                        param = param + f'{expected[byte_range.start*3:byte_range.stop*3]}'
                     if bad_byte in byte_range and param not in error_string:
-                        if print_expected:
-                            error_string.append(param + f'{expected[byte_range.start*3:byte_range.stop*3]}')
-                        else:
-                            error_string.append(param)
+                        error_string.append(param)
         error_string = '\n'.join(error_string)
 
         assert False, error_string

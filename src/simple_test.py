@@ -142,13 +142,14 @@ displayParameters = BasicDisplayParameters(
 )
 
 chromaticityCoordinates = ChromaticityCoordinates(
-    red_green_lsb='5E',
-    blue_white_lsb='C0',
-    red_x_msb='A4',
-    red_y_msb='59',
-    green_xy_msb='4A98',
-    blue_xy_msb='2520',
-    white_xy_msb='5054'
+    red_x = 657,
+    red_y = 357,
+    green_x = 299,
+    green_y = 610,
+    blue_x = 151,
+    blue_y = 128,
+    white_x = 320,
+    white_y = 336
 )
 
 standardTiming = StandardTiming(

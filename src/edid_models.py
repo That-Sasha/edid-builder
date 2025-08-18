@@ -7,8 +7,9 @@ from math import floor
 from textwrap import wrap
 from warnings import warn
 
-LSB8_BITMASK = int('0xFF',0)
-LSB4_BITMASK = int('0x0F',0)
+LSB8_BITMASK = 0xFF
+LSB4_BITMASK = 0x0F
+LSB2_BITMASK = 0x03
 
 def bytes_to_hex_block(byte_array, width=16):
 
@@ -670,37 +671,125 @@ class BasicDisplayParameters(ByteBlock):
 
 class ChromaticityCoordinates(ByteBlock):
 
-    def __init__(self, red_green_lsb='5E', blue_white_lsb='C0', red_x_msb='A4', red_y_msb='59', green_xy_msb='4A98', blue_xy_msb='2520', white_xy_msb='5054'):
+    def __init__(
+            self,
+            red_x,
+            red_y,
+            green_x,
+            green_y,
+            blue_x,
+            blue_y,
+            white_x,
+            white_y
+        ):
 
-        assert all(c in string.hexdigits for c in red_green_lsb), 'Red green lsb must be a 2 digit hexadecimal string'
-        assert all(c in string.hexdigits for c in blue_white_lsb), 'Blue white lsb must be a 2 digit hexadecimal string'
-        assert all(c in string.hexdigits for c in red_x_msb), 'Red x msb must be a 2 digit hexadecimal string'
-        assert all(c in string.hexdigits for c in red_y_msb), 'Red y msb must be a 2 digit hexadecimal string'
-        assert all(c in string.hexdigits for c in green_xy_msb), 'Green msb must be a 4 digit hexadecimal string'
-        assert all(c in string.hexdigits for c in blue_xy_msb), 'Blue msb must be a 4 digit hexadecimal string'
-        assert all(c in string.hexdigits for c in white_xy_msb), 'White msb must be a 4 digit hexadecimal string'
+        self._red_x = red_x
+        self._red_y = red_y
+        self._green_x = green_x
+        self._green_y = green_y
+        self._blue_x = blue_x
+        self._blue_y = blue_y
+        self._white_x = white_x
+        self._white_y = white_y
 
+    # ===============================================================================================
 
-        self._red_green_lsb = red_green_lsb
-        self._blue_white_lsb = blue_white_lsb
-        self._red_x_msb = red_x_msb
-        self._red_y_msb = red_y_msb
-        self._green_xy_msb = green_xy_msb
-        self._blue_xy_msb = blue_xy_msb
-        self._white_xy_msb = white_xy_msb
+    # Input Properties
 
+    # ===============================================================================================
+
+    @property
+    def red_x(self):
+        return self._red_x
+
+    @red_x.setter
+    def red_x(self, value):
+        self._red_x = value
+
+    # ===============================================================================================
+
+    @property
+    def red_y(self):
+        return self._red_y
+
+    @red_y.setter
+    def red_y(self, value):
+        self._red_y = value
+
+    # ===============================================================================================
+
+    @property
+    def green_x(self):
+        return self._green_x
+
+    @green_x.setter
+    def green_x(self, value):
+        self._green_x = value
+
+    # ===============================================================================================
+
+    @property
+    def green_y(self):
+        return self._green_y
+
+    @green_y.setter
+    def green_y(self, value):
+        self._green_y = value
+
+    # ===============================================================================================
+
+    @property
+    def blue_x(self):
+        return self._blue_x
+
+    @blue_x.setter
+    def blue_x(self, value):
+        self._blue_x = value
+
+    # ===============================================================================================
+
+    @property
+    def blue_y(self):
+        return self._blue_y
+
+    @blue_y.setter
+    def blue_y(self, value):
+        self._blue_y = value
+
+    # ===============================================================================================
+
+    @property
+    def white_x(self):
+        return self._white_x
+
+    @white_x.setter
+    def white_x(self, value):
+        self._white_x = value
+
+    # ===============================================================================================
+
+    @property
+    def white_y(self):
+        return self._white_y
+
+    @white_y.setter
+    def white_y(self, value):
+        self._white_y = value
+
+    # ===============================================================================================
+
+    # EDID Properties
+
+    # ===============================================================================================
 
     @EdidProperty
     def red_green_lsb(self):
-        return self._red_green_lsb
-
-    @red_green_lsb.setter
-    def red_green_lsb(self, value):
-        self._red_green_lsb = value
-
-    @red_green_lsb.byte_converter
-    def red_green_lsb(value):
-        return bytes.fromhex(value)
+        return (
+            (( self._red_x & LSB2_BITMASK ) << 6 )
+            + (( self._red_y & LSB2_BITMASK ) << 4 )
+            + (( self._green_x & LSB2_BITMASK ) << 2 )
+            + ( self._green_y & LSB2_BITMASK )
+        )
 
     red_green_lsb.byte_range = 0
 
@@ -708,15 +797,12 @@ class ChromaticityCoordinates(ByteBlock):
 
     @EdidProperty
     def blue_white_lsb(self):
-        return self._blue_white_lsb
-
-    @blue_white_lsb.setter
-    def blue_white_lsb(self, value):
-        self._blue_white_lsb = value
-
-    @blue_white_lsb.byte_converter
-    def blue_white_lsb(value):
-        return bytes.fromhex(value)
+        return (
+            (( self._blue_x & LSB2_BITMASK ) << 6 )
+            + (( self._blue_y & LSB2_BITMASK ) << 4 )
+            + (( self._white_x & LSB2_BITMASK ) << 2 )
+            + ( self._white_y & LSB2_BITMASK )
+        )
 
     blue_white_lsb.byte_range = 1
 
@@ -724,15 +810,8 @@ class ChromaticityCoordinates(ByteBlock):
 
     @EdidProperty
     def red_x_msb(self):
-        return self._red_x_msb
-
-    @red_x_msb.setter
-    def red_x_msb(self, value):
-        self._red_x_msb = value
-
-    @red_x_msb.byte_converter
-    def red_x_msb(value):
-        return bytes.fromhex(value)
+        # 10 bit number
+        return ( self._red_x >> 2 )
 
     red_x_msb.byte_range = 2
 
@@ -740,65 +819,64 @@ class ChromaticityCoordinates(ByteBlock):
 
     @EdidProperty
     def red_y_msb(self):
-        return self._red_y_msb
-
-    @red_y_msb.setter
-    def red_y_msb(self, value):
-        self._red_y_msb = value
-
-    @red_y_msb.byte_converter
-    def red_y_msb(value):
-        return bytes.fromhex(value)
+        # 10 bit number
+        return ( self._red_y >> 2 )
 
     red_y_msb.byte_range = 3
 
     # ===============================================================================================
 
     @EdidProperty
-    def green_xy_msb(self):
-        return self._green_xy_msb
+    def green_x_msb(self):
+        # 10 bit number
+        return ( self._green_x >> 2 )
 
-    @green_xy_msb.setter
-    def green_xy_msb(self, value):
-        self._green_xy_msb = value
-
-    @green_xy_msb.byte_converter
-    def green_xy_msb(value):
-        return bytes.fromhex(value)
-
-    green_xy_msb.byte_range = [4,6]
+    green_x_msb.byte_range = 4
 
     # ===============================================================================================
 
     @EdidProperty
-    def blue_xy_msb(self):
-        return self._blue_xy_msb
+    def green_y_msb(self):
+        # 10 bit number
+        return ( self._green_y >> 2 )
 
-    @blue_xy_msb.setter
-    def blue_xy_msb(self, value):
-        self._blue_xy_msb = value
-
-    @blue_xy_msb.byte_converter
-    def blue_xy_msb(value):
-        return bytes.fromhex(value)
-
-    blue_xy_msb.byte_range = [6,8]
+    green_y_msb.byte_range = 5
 
     # ===============================================================================================
 
     @EdidProperty
-    def white_xy_msb(self):
-        return self._white_xy_msb
+    def blue_x_msb(self):
+        # 10 bit number
+        return ( self._blue_x >> 2 )
 
-    @white_xy_msb.setter
-    def white_xy_msb(self, value):
-        self._white_xy_msb = value
+    blue_x_msb.byte_range = 6
 
-    @white_xy_msb.byte_converter
-    def white_xy_msb(value):
-        return bytes.fromhex(value)
+    # ===============================================================================================
 
-    white_xy_msb.byte_range = [8,10]
+    @EdidProperty
+    def blue_y_msb(self):
+        # 10 bit number
+        return ( self._blue_y >> 2 )
+
+    blue_y_msb.byte_range = 7
+
+    # ===============================================================================================
+
+    @EdidProperty
+    def white_x_msb(self):
+        # 10 bit number
+        return ( self._white_x >> 2 )
+
+    white_x_msb.byte_range = 8
+
+    # ===============================================================================================
+
+    @EdidProperty
+    def white_y_msb(self):
+        # 10 bit number
+        return ( self._white_y >> 2 )
+
+    white_y_msb.byte_range = 9
 
 class StandardTiming(ByteBlock):
 

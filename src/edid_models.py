@@ -522,6 +522,52 @@ class BasicDisplayParameters(ByteBlock):
 
         parameters_bitmap.byte_range = 0
 
+    class SupportedFeatures(ByteBlock):
+
+        class DigitalDisplayType(Enum):
+            RGB444=0
+            RGB444_YCrCb444=1
+            RGB444_YCrCb422=2
+            RGB444_YCrCb444_YCrCb422=3
+
+        class AnalogueDisplayType(Enum):
+            MONOCHROME=0
+            RGB=1
+            NON_RGB=2
+            UNDEFINED=3
+
+        def __init__(
+                self,
+                dpms_standby : bool,
+                dpms_suspend : bool,
+                dpms_active_off : bool,
+                display_type : DigitalDisplayType | AnalogueDisplayType,
+                standard_srgb : bool,
+                dtd_block_1_is_preferred : bool,
+                continuous_timings : bool
+                ):
+            self._dpms_standby = dpms_standby
+            self._dpms_suspend = dpms_suspend
+            self._dpms_active_off = dpms_active_off
+            self._display_type = display_type
+            self._standard_srgb = standard_srgb
+            self._dtd_block_1_is_preferred = dtd_block_1_is_preferred
+            self._continuous_timings = continuous_timings
+
+        @EdidProperty
+        def feature_bitmap(self):
+            return (
+                (int(self._dpms_standby) << 7)
+                + (int(self._dpms_suspend) << 6)
+                + (int(self._dpms_active_off) << 5)
+                + (self._display_type.value << 3)
+                + (int(self._standard_srgb) << 2)
+                + (int(self._dtd_block_1_is_preferred) << 1)
+                + int(self._continuous_timings)
+            )
+
+        feature_bitmap.byte_range = 0
+
     def __init__(
             self,
             video_params=DigitalParameters(
@@ -531,13 +577,20 @@ class BasicDisplayParameters(ByteBlock):
             horizontal_size=100,
             vertical_size=56,
             gamma=2.2,
-            suported_features='FF'
+            suported_features : SupportedFeatures=SupportedFeatures (
+                    dpms_standby=True,
+                    dpms_suspend=True,
+                    dpms_active_off=True,
+                    display_type=SupportedFeatures.DigitalDisplayType.RGB444_YCrCb444,
+                    standard_srgb=False,
+                    dtd_block_1_is_preferred=True,
+                    continuous_timings=False
+                )
             ):
 
         assert 1 <= horizontal_size <= 255, 'Horizontal size must be an integer 1 - 255'
         assert 1 <= vertical_size <= 255, 'Vertical size must be an integer 1 - 255'
         assert 1.00 <= gamma <= 3.54, 'Gamma must be an integer 1.00 - 3.54'
-        assert all(c in string.hexdigits for c in suported_features), 'Supported features must be a 2 digit hexadecimal string'
 
         self._video_params = video_params
         self._horizontal_size = horizontal_size
@@ -611,7 +664,7 @@ class BasicDisplayParameters(ByteBlock):
 
     @suported_features.byte_converter
     def suported_features(value):
-        return bytes.fromhex(value)
+        return value.as_bytes
 
     suported_features.byte_range = 4
 

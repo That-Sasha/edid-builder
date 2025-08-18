@@ -130,7 +130,15 @@ displayParameters = BasicDisplayParameters(
     horizontal_size=100,
     vertical_size=56,
     gamma=2.2,
-    suported_features='EA'
+    suported_features=BasicDisplayParameters.SupportedFeatures (
+                    dpms_standby=True,
+                    dpms_suspend=True,
+                    dpms_active_off=True,
+                    display_type=BasicDisplayParameters.SupportedFeatures.AnalogueDisplayType.RGB,
+                    standard_srgb=False,
+                    dtd_block_1_is_preferred=True,
+                    continuous_timings=False
+                )
 )
 
 chromaticityCoordinates = ChromaticityCoordinates(

@@ -1,5 +1,4 @@
 import itertools
-import re
 
 from edid_models import *
 from math import ceil, floor
@@ -58,14 +57,13 @@ def describe_params(object, field_name):
 
     return rows
 
-def simple_test(test_class, expected, print_bad_bytes=True):
+def simple_test(test_class, expected, print_bad_bytes=True, print_expected=False):
 
     actual = str(test_class)
 
     zipped_list = list(itertools.zip_longest(actual, expected, fillvalue='X'))
     highlight_match = ""
     bad_bytes = []
-
 
     for idx, (act, exp) in enumerate(zipped_list):
         if act == 'X':
@@ -90,23 +88,21 @@ def simple_test(test_class, expected, print_bad_bytes=True):
             error_string.append('Bad fields: ')
 
             all_params = describe_params(test_class, test_class.__class__.__name__)
-            error_string.append(all_params[0])
+            error_string.append(all_params[0] + 'Expected')
 
             for bad_byte in bad_bytes:
                 for param in all_params[1:]:
-                    if bad_byte in range(int(param.split(' ')[0]), int(param.split(' ')[2]) + 1) and param not in error_string:
-                        error_string.append(param)
-
+                    byte_range = range(int(param.split(' ')[0]), int(param.split(' ')[2]) + 1)
+                    if bad_byte in byte_range and param not in error_string:
+                        if print_expected:
+                            error_string.append(param + f'{expected[byte_range.start*3:byte_range.stop*3]}')
+                        else:
+                            error_string.append(param)
         error_string = '\n'.join(error_string)
 
         assert False, error_string
     else:
         print(f'Simple test success!\n{highlight_match}')
-
-
-# Simple test case
-with(open('../resources/3840x2160.hex', 'r')) as file:
-    expected = file.read()
 
 
 header = Header(
@@ -197,10 +193,19 @@ base_edid = BaseEDID(
     num_ext_blocks = 0
 )
 
-simple_test(base_edid, expected, print_bad_bytes=False)
+if __name__ == "__main__":
 
-rows = describe_params(base_edid, 'base_edid')
+    # Simple test case
+    with(open('../resources/3840x2160.hex', 'r')) as file:
+        expected = file.read()
 
-[print(row) for row in rows]
-print()
-print(f'Edid built from {len(rows)} unique parameters')
+    simple_test(base_edid, expected, print_bad_bytes=True)
+
+    with open("output.bin", "wb") as binary_file:
+        binary_file.write(base_edid.as_bytes)
+
+    rows = describe_params(base_edid, 'base_edid')
+
+    [print(row) for row in rows]
+    print()
+    print(f'Edid built from {len(rows)} unique parameters')

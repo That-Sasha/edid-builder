@@ -200,7 +200,7 @@ class BaseEDID(ByteBlock):
 
         self._checksum = 0
         edid_sum = sum(self.as_bytes)
-        self._checksum = 256 - edid_sum % 256
+        self._checksum = (256 - edid_sum % 256) % 256
 
 
     @EdidProperty
@@ -586,8 +586,8 @@ class BasicDisplayParameters(ByteBlock):
                 )
             ):
 
-        assert 1 <= horizontal_size <= 255, 'Horizontal size must be an integer 1 - 255'
-        assert 1 <= vertical_size <= 255, 'Vertical size must be an integer 1 - 255'
+        assert 0 <= horizontal_size <= 255, 'Horizontal size must be an integer 0 - 255'
+        assert 0 <= vertical_size <= 255, 'Vertical size must be an integer 0 - 255'
         assert 1.00 <= gamma <= 3.54, 'Gamma must be an integer 1.00 - 3.54'
 
         self._video_params = video_params
@@ -1130,7 +1130,7 @@ class DetailedTimingDescriptor(ByteBlock):
 
     @pixel_clock.byte_converter
     def pixel_clock(value):
-        return (value * 100).to_bytes(2, 'little')
+        return int(value * 100).to_bytes(2, 'little')
 
     pixel_clock.byte_range = [0,2]
 

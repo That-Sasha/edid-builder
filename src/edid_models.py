@@ -210,14 +210,14 @@ class BaseEDID(ByteBlock):
         assert isinstance(descriptors, list) and len(descriptors) == 4, 'Descriptors must be a list of 4 descriptor objects'
         assert isinstance(descriptors[0], DetailedTimingDescriptor), 'Descriptor 1 must be a detailed timing descriptor'
 
-        self._header = header
-        self._basic_display_parameters = basic_display_parameters
-        self._chromaticity_coordinates = chromaticity_coordinates
-        self._established_timing = established_timing
-        self._standard_timings = standard_timings
-        self._descriptors = descriptors
+        self.header = header
+        self.basic_display_parameters = basic_display_parameters
+        self.chromaticity_coordinates = chromaticity_coordinates
+        self.established_timing = established_timing
+        self.standard_timings = standard_timings
+        self.descriptors = descriptors
 
-        self._extension_blocks = extension_blocks
+        self.extension_blocks = extension_blocks
         self.extension_blocks.byte_range[1] += 128 * len(extension_blocks)
 
         self._checksum = 0
@@ -228,6 +228,9 @@ class BaseEDID(ByteBlock):
 
         self._checksum = (256 - edid_sum % 256) % 256
 
+    def save(self, filename):
+        with open(filename, "wb") as binary_file:
+            binary_file.write(self.as_bytes)
 
     @EdidProperty
     def header(self):
@@ -376,12 +379,12 @@ class Header(ByteBlock):
         assert manufacture_year <= 2245, 'Year of manufacture must be an integer <= 2245'
         assert isinstance(edid_version, str) and re.search(r'^\d\.\d$', edid_version)
 
-        self._manufacturer_id = manufacturer_id
-        self._product_code = product_code
-        self._serial_num = serial_num
-        self._manufacture_week = manufacture_week
-        self._manufacture_year = manufacture_year
-        self._edid_version = edid_version
+        self.manufacturer_id = manufacturer_id
+        self.product_code = product_code
+        self.serial_num = serial_num
+        self.manufacture_week = manufacture_week
+        self.manufacture_year = manufacture_year
+        self.edid_version = edid_version
 
     @EdidProperty
     def fixed_pattern(self):
@@ -506,15 +509,45 @@ class BasicDisplayParameters(ByteBlock):
             DISPLAY_PORT=5
 
         def __init__(self, bit_depth, interface):
-            self._bit_depth = bit_depth
-            self._interface = interface
+            self.bit_depth = bit_depth
+            self.interface = interface
+
+        # ===============================================================================================
+
+        # Input Properties
+
+        # ===============================================================================================
+
+        @property
+        def bit_depth(self):
+            return self._bit_depth
+
+        @bit_depth.setter
+        def bit_depth(self, value):
+            self._bit_depth = value
+    
+        # ===============================================================================================
+
+        @property
+        def interface(self):
+            return self._interface
+
+        @interface.setter
+        def interface(self, value):
+            self._interface = value
+
+        # ===============================================================================================
+
+        # EDID Properties
+
+        # ===============================================================================================
 
         @EdidProperty
         def parameters_bitmap(self):
             return (
                 (1 << 7)
-                + (self._bit_depth.value << 4)
-                + self._interface.value
+                + (self.bit_depth.value << 4)
+                + self.interface.value
             )
 
         parameters_bitmap.byte_range = 0
@@ -823,10 +856,10 @@ class ChromaticityCoordinates(ByteBlock):
     @EdidProperty
     def red_green_lsb(self):
         return (
-            (( self._red_x & LSB2_BITMASK ) << 6 )
-            + (( self._red_y & LSB2_BITMASK ) << 4 )
-            + (( self._green_x & LSB2_BITMASK ) << 2 )
-            + ( self._green_y & LSB2_BITMASK )
+            (( round(self._red_x * 1024) & LSB2_BITMASK ) << 6 )
+            + (( round(self._red_y * 1024) & LSB2_BITMASK ) << 4 )
+            + (( round(self._green_x * 1024) & LSB2_BITMASK ) << 2 )
+            + ( round(self._green_y * 1024) & LSB2_BITMASK )
         )
 
     red_green_lsb.byte_range = 0
@@ -836,10 +869,10 @@ class ChromaticityCoordinates(ByteBlock):
     @EdidProperty
     def blue_white_lsb(self):
         return (
-            (( self._blue_x & LSB2_BITMASK ) << 6 )
-            + (( self._blue_y & LSB2_BITMASK ) << 4 )
-            + (( self._white_x & LSB2_BITMASK ) << 2 )
-            + ( self._white_y & LSB2_BITMASK )
+            (( round(self._blue_x * 1024) & LSB2_BITMASK ) << 6 )
+            + (( round(self._blue_y * 1024) & LSB2_BITMASK ) << 4 )
+            + (( round(self._white_x * 1024) & LSB2_BITMASK ) << 2 )
+            + ( round(self._white_y * 1024) & LSB2_BITMASK )
         )
 
     blue_white_lsb.byte_range = 1
@@ -849,7 +882,7 @@ class ChromaticityCoordinates(ByteBlock):
     @EdidProperty
     def red_x_msb(self):
         # 10 bit number
-        return ( self._red_x >> 2 )
+        return ( round(self._red_x * 1024) >> 2 )
 
     red_x_msb.byte_range = 2
 
@@ -858,7 +891,7 @@ class ChromaticityCoordinates(ByteBlock):
     @EdidProperty
     def red_y_msb(self):
         # 10 bit number
-        return ( self._red_y >> 2 )
+        return ( round(self._red_y * 1024)  >> 2 )
 
     red_y_msb.byte_range = 3
 
@@ -867,7 +900,7 @@ class ChromaticityCoordinates(ByteBlock):
     @EdidProperty
     def green_x_msb(self):
         # 10 bit number
-        return ( self._green_x >> 2 )
+        return ( round(self._green_x * 1024)  >> 2 )
 
     green_x_msb.byte_range = 4
 
@@ -876,7 +909,7 @@ class ChromaticityCoordinates(ByteBlock):
     @EdidProperty
     def green_y_msb(self):
         # 10 bit number
-        return ( self._green_y >> 2 )
+        return ( round(self._green_y * 1024)  >> 2 )
 
     green_y_msb.byte_range = 5
 
@@ -885,7 +918,7 @@ class ChromaticityCoordinates(ByteBlock):
     @EdidProperty
     def blue_x_msb(self):
         # 10 bit number
-        return ( self._blue_x >> 2 )
+        return ( round(self._blue_x * 1024)  >> 2 )
 
     blue_x_msb.byte_range = 6
 
@@ -894,7 +927,7 @@ class ChromaticityCoordinates(ByteBlock):
     @EdidProperty
     def blue_y_msb(self):
         # 10 bit number
-        return ( self._blue_y >> 2 )
+        return ( round(self._blue_y * 1024)  >> 2 )
 
     blue_y_msb.byte_range = 7
 
@@ -903,7 +936,7 @@ class ChromaticityCoordinates(ByteBlock):
     @EdidProperty
     def white_x_msb(self):
         # 10 bit number
-        return ( self._white_x >> 2 )
+        return ( round(self._white_x * 1024)  >> 2 )
 
     white_x_msb.byte_range = 8
 
@@ -912,7 +945,7 @@ class ChromaticityCoordinates(ByteBlock):
     @EdidProperty
     def white_y_msb(self):
         # 10 bit number
-        return ( self._white_y >> 2 )
+        return ( round(self._white_y * 1024)  >> 2 )
 
     white_y_msb.byte_range = 9
 
@@ -1053,22 +1086,22 @@ class DetailedTimingDescriptor(ByteBlock):
 
         assert 0.01 <= pixel_clock <= 655.35, 'Pixel clock must be between 0.01 - 655.35 MHz'
 
-        self._pixel_clock = pixel_clock
-        self._hor_pixels = hor_pixels
-        self._hor_blnk_pixels = hor_blnk_pixels
-        self._vert_pixels = vert_pixels
-        self._vert_blnk_pixels = vert_blnk_pixels
-        self._hor_front_porch = hor_front_porch
-        self._hor_synch_pulse = hor_synch_pulse
-        self._vert_front_porch = vert_front_porch
-        self._vert_synch_pulse = vert_synch_pulse
-        self._hor_size_mm = hor_size_mm
-        self._vert_size_mm = vert_size_mm
-        self._hor_border_pixels = hor_border_pixels
-        self._vert_border_pixels = vert_border_pixels
-        self._interlaced = interlaced
-        self._stereo = stereo
-        self._sync = sync
+        self.pixel_clock = pixel_clock
+        self.hor_pixels = hor_pixels
+        self.hor_blnk_pixels = hor_blnk_pixels
+        self.vert_pixels = vert_pixels
+        self.vert_blnk_pixels = vert_blnk_pixels
+        self.hor_front_porch = hor_front_porch
+        self.hor_synch_pulse = hor_synch_pulse
+        self.vert_front_porch = vert_front_porch
+        self.vert_synch_pulse = vert_synch_pulse
+        self.hor_size_mm = hor_size_mm
+        self.vert_size_mm = vert_size_mm
+        self.hor_border_pixels = hor_border_pixels
+        self.vert_border_pixels = vert_border_pixels
+        self.interlaced = interlaced
+        self.stereo = stereo
+        self.sync = sync
 
     # ===============================================================================================
 
@@ -1127,6 +1160,26 @@ class DetailedTimingDescriptor(ByteBlock):
     # ===============================================================================================
 
     @property
+    def vert_front_porch(self):
+        return self._vert_front_porch
+
+    @vert_front_porch.setter
+    def vert_front_porch(self, value):
+        self._vert_front_porch = value
+
+    # ===============================================================================================
+
+    @property
+    def vert_synch_pulse(self):
+        return self._vert_synch_pulse
+
+    @vert_synch_pulse.setter
+    def vert_synch_pulse(self, value):
+        self._vert_synch_pulse = value
+
+    # ===============================================================================================
+
+    @property
     def hor_synch_pulse(self):
         return self._hor_synch_pulse
 
@@ -1153,6 +1206,36 @@ class DetailedTimingDescriptor(ByteBlock):
     @vert_size_mm.setter
     def vert_size_mm(self, value):
         self._vert_size_mm = value
+
+    # ===============================================================================================
+
+    @property
+    def interlaced(self):
+        return self._interlaced
+
+    @interlaced.setter
+    def interlaced(self, value):
+        self._interlaced = value
+
+    # ===============================================================================================
+
+    @property
+    def stereo(self):
+        return self._stereo
+
+    @stereo.setter
+    def stereo(self, value):
+        self._stereo = value
+
+    # ===============================================================================================
+
+    @property
+    def sync(self):
+        return self._sync
+
+    @sync.setter
+    def sync(self, value):
+        self._sync = value
 
     # ===============================================================================================
 

@@ -24,7 +24,7 @@ def get_parameters(object, field_name, first_byte_relative):
 
         if isinstance(child_instance, list):
             if all(isinstance(child_item, ByteBlock) for child_item in child_instance):
-                block_size = (byte_range[1] - byte_range[0]) / len(child_instance)
+                block_size = child_wrapper.block_size
 
                 for num, child_item in enumerate(child_instance):
 
@@ -137,14 +137,14 @@ displayParameters = BasicDisplayParameters(
 )
 
 chromaticityCoordinates = ChromaticityCoordinates(
-    red_x = 657,
-    red_y = 357,
-    green_x = 299,
-    green_y = 610,
-    blue_x = 151,
-    blue_y = 128,
-    white_x = 320,
-    white_y = 336
+    red_x = 0.657,
+    red_y = 0.357,
+    green_x = 0.299,
+    green_y = 0.610,
+    blue_x = 0.151,
+    blue_y = 0.128,
+    white_x = 0.320,
+    white_y = 0.336
 )
 
 standardTiming = StandardTiming(
